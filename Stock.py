@@ -7,7 +7,7 @@ import json
 import os
 import numpy    as np
 import pandas   as pd
-import bs4      as BeautifulSoup
+from   bs4      import BeautifulSoup
 
 headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
 
@@ -17,8 +17,12 @@ def crawl_price(stock_id):
     print(url)
     res = requests.get (url, headers = headers)
     res.encoding = "utf-8"
-#    soup = BeautifulSoup (res.text, "html.parser")
-#    print(soup.prettift())
+    soup = BeautifulSoup (res.text, "html.parser")
+    data = soup.select_one("#divPriceDetail")
+    dfs = pd.read_html(data.prettify())
+    df = dfs[0]
+    df.columns = df.columns.get_level_values(3)
+    print(df)
     
 os.system("cls")
 print ('\n')
@@ -31,6 +35,3 @@ print('*                       1.Inquire Stock Price                            
 print('*******************************************************************************')
 stockId = input ("請輸入股票代碼(ex:2330):")
 crawl_price(stockId)
-
-
-#df.close.plot()
