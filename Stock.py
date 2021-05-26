@@ -11,6 +11,7 @@ from   bs4      import BeautifulSoup
 
 headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
 
+
 def crawl_price(stock_id):
 
     url = "https://goodinfo.tw/StockInfo/ShowK_Chart.asp?STOCK_ID="+stock_id+"&CHT_CAT2=DATE"
