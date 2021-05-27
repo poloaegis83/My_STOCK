@@ -17,10 +17,10 @@ struct _DailyInfo {
    SHORT16 High;
    SHORT16 Low;
 
-   SHORT16 LeaderDifference;
-   SHORT16 ForeignInvestorsDiff;
-   SHORT16 InvestmentTrustDiff;  
-   SHORT16 DealersDiff;
+   int LeaderDifference;
+   int ForeignInvestorsDiff;
+   int InvestmentTrustDiff;  
+   int DealersDiff;
 
    SHORT16 MA5;
    SHORT16 MA10;
@@ -81,14 +81,18 @@ int Main(int argc, char **argv)
   // StockEmulator.exe [XmlFileName] [Days]
   //
   
-  pFile = fopen( argv[0],"w" );
+  fptr = fopen( argv[0],"r" );
+  if (!fptr) {
+    return 1;
+  }
+  
   DayIntervals = argv[1];
 
   //
   // Init the stock data struct
   //
   InitStockDailyInfoData(fptr, StockDailyData, DayIntervals);
-  
+  fclose(fptr);
   //
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
@@ -224,13 +228,14 @@ VOID InitStockDailyInfoData(FILE *XmlPointer , DAILY_INFO *DailyInfoBuffer, SHOR
   //
 
   //
-  // Reads XML data and write it to DailyInfoBuffer
-  //
-
-  //
   // Allcate memory to buffer, the first data should 60 days before start day for calculate MA60.
   //
   DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+60));
+  
+  //
+  // Parsing XML data and write it to DailyInfoBuffer
+  //
+
 
   //
   // Calculate MA5 MA10 MA20 MA60 write into DailyInfoBuffer
@@ -402,5 +407,4 @@ VOID AnalysisProfit (TRADE_RECORD  *TradeRecords)
 
      Count++;
    }
-
 }
