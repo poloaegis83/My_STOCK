@@ -1,33 +1,12 @@
 <?xml version="1.0"?>
  <StockData>
-  <Daily>
-    <Index>001</Index>
-    <StockId>2330</StockId>
-    <Year>2021</Year>
-    <Mouth>01</Mouth>
-    <Day>04</Day>
-    <Start>530</Start>
-    <End>536</End>
-    <High>540</High>
-    <Low>528</low>
-    <LeaderDifference>234100</LeaderDifference>
-    <ForeignInvestorsDiff>1246300</ForeignInvestorsDiff>
-    <InvestmentTrustDiff>-3290</InvestmentTrustDiff>
-    <DealersDiff>86500</DealersDiff>
+  <StockId>2330</StockId>
+  <Daily Index = "001" Years = "2021" Mouths = "01" Days= "04">
+    <Price Start = "530" End = "536" High = "540" Low = "528"> </Price>
+    <Difference LeaderDiff = "234100" ForeignInvestorsDiff = "1246300" InvestmentTrustDiff = "-3290" DealersDiff = "86500"> </Difference> 
   </Daily>
-  <Daily>
-    <Index>002</Index>
-    <StockId>2330</StockId>
-    <Year>2021</Year>
-    <Mouth>01</Mouth>
-    <Day>05</Day>
-    <Start>536</Start>
-    <End>535</End>
-    <High>542</High>
-    <Low>542</low>
-    <LeaderDifference>3435400</LeaderDifference>
-    <ForeignInvestorsDiff>301600</ForeignInvestorsDiff>
-    <InvestmentTrustDiff>17800</InvestmentTrustDiff>
-    <DealersDiff>-45100</DealersDiff>
+  <Daily Index = "002" Years = "2021" Mouths = "01" Days= "05">
+    <Price Start = "536" End = "535" High = "542" Low = "542"> </Price>
+    <Difference LeaderDiff = "3435400" ForeignInvestorsDiff = "301600" InvestmentTrustDiff = "17800" DealersDiff = "-45100"> </Difference>    
   </Daily>
  </StockData>
