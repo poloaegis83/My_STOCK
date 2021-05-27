@@ -298,15 +298,15 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
     // 3 Cases of LeaderDifference
     //  
     if (LastDay->LeaderDifference < 0 && Last2Day->LeaderDifference < 0) {
-      if(NewPrice < DailyInfo.MA20) {
+      if(NewPrice < LastDay.MA20) {
         ConditionCheck = true;
       }  
     } else if (LastDay->LeaderDifference < 0) {
-      if(NewPrice < DailyInfo.MA10) {
+      if(NewPrice < LastDay.MA10) {
         ConditionCheck = true;
       }  
     } else (LastDay->LeaderDifference >= 0) {
-      if(NewPrice < DailyInfo.MA5) {
+      if(NewPrice < LastDay.MA5) {
         ConditionCheck = true;
       }
     }
