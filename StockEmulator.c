@@ -7,6 +7,7 @@ typedef struct _Date DATE;
 typedef struct _Trade_Record  TRADE_RECORD;
 typedef unsigned short SHORT16;
 #define MA5_OVER_MA10 103
+#define STOP_LOSS_LIMIT 15
   
 struct _DailyInfo {
    SHORT16 StockID;
@@ -40,7 +41,7 @@ struct _Date {
   SHORT16 Years;
   SHORT16 Mouths;
   SHORT16 Days;
-}
+};
 
 struct _Trade_Record {
   SHORT16       BuyDayIndex;
@@ -53,71 +54,110 @@ struct _Trade_Record {
   DATE          SellDates;
 
   TRADE_RECORD  *Next;
-}
+};
 
 VOID InitStockDailyInfoData (FILE *XmlPointer, DAILY_INFO *DailyInfoBuffer, SHORT16 days);
+VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead);
+VOID AnalysisProfit (TRADE_RECORD  *TradeRecords);
+VOID CalculateMA(DAILY_INFO * DailyInfo);
+VOID CalculateRSI(DAILY_INFO * DailyInfo);
+VOID CalculateKD(DAILY_INFO * DailyInfo);
+VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice);
+VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, DAILY_INFO *DailyInfo, SHORT16 *SellDayIndex, SHORT16 *SellPrice);
 
-int MAIN()
+
+int Main(int argc, char **argv)
 {
 
-  FILE       *fptr;
-  DAILY_INFO *StockDailyData;
-  SHORT16     DayIntervals;
-  SHORT16     StartDayIndex;
-  SHORT16     EndDayIndex;
+  FILE          *fptr;
+  DAILY_INFO    *StockDailyData;
+  SHORT16       DayIntervals;
+  SHORT16       StartDayIndex;
+  SHORT16       EndDayIndex;
+  TRADE_RECORD  *ReturnRecords;
   
-  pFile = fopen( "StockData.xml","w" );
+  // 
+  // Argument format:
+  // StockEmulator.exe [XmlFileName] [Days]
+  //
+  
+  pFile = fopen( argv[0],"w" );
+  DayIntervals = argv[1];
+
+  //
+  // Init the stock data struct
+  //
   InitStockDailyInfoData(fptr, StockDailyData, DayIntervals);
   
   //
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
-  // StockSimulator (StartDayIndex, EndDayIndex, StockDailyData);
+  ReturnRecords = NULL;
+  StartDayIndex = 0;
+  EndDayIndex = StartDayIndex + DayIntervals;
+  StockSimulator (StartDayIndex, EndDayIndex, StockDailyData, ReturnRecords);
 
+  //
+  // Calculate profit base on the records
+  //
+  AnalysisProfit (ReturnRecords);
 
   return 0;
 
 }
 
-VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo)
+VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead)
 {
   SHORT16       StartDayIndex1;
   SHORT16       BuyDayIndex;
   SHORT16       BuyPrice;
   SHORT16       SellDayIndex;
   SHORT16       SellPrice;
-  
+  SHORT16       Count;
+    
   TRADE_RECORD  *OldRecords;
-  TRADE_RECORD  *NewRecords;
-  
+  TRADE_RECORD  *NewRecords; 
+
+  Count = 0;
+  OldRecords = NULL;
+  NewRecords = NULL;
   StartDayIndex1 = StartDayIndex;
 
   while(SellDayIndex+2 < EndDayIndex) {  //Need at least 2 days left, for buypoint and sellpoint check.
-    
-    // TimeLine  |StartDayIndex---BuyDayIndex---EndDayIndex|
-    FindBuyPoint(StartDayIndex1, EndDayIndex, DailyInfo, &BuyDayIndex, &BuyPrice);
-    
-    // TimeLine |BuyDayIndex---SellDayIndex---EndDayIndex|
-    FindSellPoint(BuyDayIndex, EndDayIndex, BuyPrice, DailyInfo &SellDayIndex, &SellPrice);
-  
-    //
-    // Record Events
-    //
-    NewRecords = (TRADE_RECORD*) malloc(sizeof(TRADE_RECORD));
-    
-    NewRecords->BuyDayIndex = BuyDayIndex;
-    NewRecords->SellDayIndex = SellDayIndex;
-    NewRecords->BuyPrice = BuyPrice;
-    NewRecords->SellPrice = SellPrice;
-    NewRecords->Next = NULL;
-    
-    OldRecords->Next = NewRecords;
-    OldRecords = NewRecords;
 
     //
-    // Next StartDay = this time SellDay
+    // Time order: StartDayIndex-->BuyDayIndex-->SellDayIndex-->EndDayIndex
+    //             [---------------FindBuyPoint---------------------------]
+    //                            [-------------FindSellPoint-------------]        
+    //
+    FindBuyPoint(StartDayIndex1, EndDayIndex, DailyInfo, &BuyDayIndex, &BuyPrice);
+
+    FindSellPoint(BuyDayIndex, EndDayIndex, BuyPrice, DailyInfo &SellDayIndex, &SellPrice);
+
+    //
+    // Record trade events
+    //
+    NewRecords = (TRADE_RECORD*) malloc(sizeof(TRADE_RECORD));
+
+    NewRecords->BuyDayIndex  = BuyDayIndex;
+    NewRecords->SellDayIndex = SellDayIndex;
+    NewRecords->BuyPrice     = BuyPrice;
+    NewRecords->SellPrice    = SellPrice;
+    NewRecords->Next = NULL;
+
+    if(Count == 0) {
+      ReturnRecordsHead = NewRecords;
+    } else {
+      OldRecords->Next = NewRecords;
+    }
+      OldRecords = NewRecords;
+
+    //
+    // Next time StartDayIndex equals SellDayIndex at this times
     //
     StartDayIndex1 = SellDayIndex;
+
+    Count++;
   }
 
 }
@@ -180,7 +220,7 @@ VOID CalculateKD(DAILY_INFO * DailyInfo)
 VOID InitStockDailyInfoData(FILE *XmlPointer , DAILY_INFO *DailyInfoBuffer, SHORT16 days)
 {
   //
-  // Catch stock Data By ID from XML file, then init the data to struct.
+  // Catch stock data and ID from XML file, then init the data to struct.
   //
 
   //
@@ -205,12 +245,12 @@ VOID InitStockDailyInfoData(FILE *XmlPointer , DAILY_INFO *DailyInfoBuffer, SHOR
   CalculateKD(DailyInfoBuffer);
 
   //
-  // Convert dates to DayIndex write into DailyInfoBuffer
+  // Update Dates and DayIndex in DailyInfoBuffer
   //
   
 }
 
-SHORT16 FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice)
+VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice)
 {
   //
   // Find buying point
@@ -291,7 +331,16 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
     LastDay = DailyInfo--;
     Last2Day = LastDay--;
     NewPrice = DailyInfo.Start;
-    
+
+    //
+    // Check for stop loss order
+    //
+    if((BuyPrice - NewPrice)/BuyPrice > STOP_LOSS_LIMIT) // if loss more than 15% 
+    {
+      ConditionCheck = true;
+      break;
+    }
+
     //
     // Check MA
     //
@@ -315,6 +364,7 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
     // Check RSI, KD
     //
 
+
     //
     // Return day index and Price
     //
@@ -329,4 +379,28 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
        //
     }
   }
+  
+}
+
+VOID AnalysisProfit (TRADE_RECORD  *TradeRecords)
+{
+   SHORT16  Count;
+   SHORT16  EarnedMoney;
+   SHORT16  LoseMoney;
+
+   EarnedMoney = 0;
+   LoseMoney   = 0;
+   
+   while(TradeRecords->Next != NULL) 
+   {
+     if(TradeRecords->BuyPrice >= TradeRecords->SellPrice)
+     {
+       EarnedMoney += (TradeRecords->SellPrice - TradeRecords->BuyPrice);
+     } else {
+       LoseMoney += (TradeRecords->BuyPrice - TradeRecords->SellPrice);
+     }
+
+     Count++;
+   }
+
 }
