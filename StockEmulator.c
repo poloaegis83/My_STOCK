@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
 typedef struct _DailyInfo DAILY_INFO;
 typedef struct _Date DATE;
 typedef struct _Trade_Record  TRADE_RECORD;
@@ -51,7 +55,7 @@ struct _Trade_Record {
   TRADE_RECORD  *Next;
 }
 
-DAILY_INFO *InitStockDailyInfoData(void*, SHORT16);
+VOID InitStockDailyInfoData (FILE *XmlPointer, DAILY_INFO *DailyInfoBuffer, SHORT16 days);
 
 int MAIN()
 {
@@ -59,14 +63,17 @@ int MAIN()
   FILE       *fptr;
   DAILY_INFO *StockDailyData;
   SHORT16     DayIntervals;
+  SHORT16     StartDayIndex;
+  SHORT16     EndDayIndex;
   
   pFile = fopen( "StockData.xml","w" );
-  InitStockDailyInfoData (fptr, StockDailyData, DayIntervals);
+  InitStockDailyInfoData(fptr, StockDailyData, DayIntervals);
   
+  //
+  // Emulator for (StartDayIndex - EndDayIndex) Days Interval
+  //
+  // StockSimulator (StartDayIndex, EndDayIndex, StockDailyData);
 
-  //
-  //StockSimulator
-  //
 
   return 0;
 
@@ -85,10 +92,7 @@ VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dail
   
   StartDayIndex1 = StartDayIndex;
 
-  while(SellDayIndex+2 < EndDayIndex) {
-    //
-    // Find buying point
-    //
+  while(SellDayIndex+2 < EndDayIndex) {  //Need at least 2 days left, for buypoint and sellpoint check.
     
     // TimeLine  |StartDayIndex---BuyDayIndex---EndDayIndex|
     FindBuyPoint(StartDayIndex1, EndDayIndex, DailyInfo, &BuyDayIndex, &BuyPrice);
@@ -121,7 +125,7 @@ VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dail
 VOID CalculateMA(DAILY_INFO * DailyInfo)
 {
   //
-  // Calculate MA data in DAILY_INFO.
+  // Calculate MA data write into DAILY_INFO.
   //
   SHORT16       Price5;
   SHORT16       Price10;
@@ -154,53 +158,54 @@ VOID CalculateMA(DAILY_INFO * DailyInfo)
   DailyInfo->MA10   = Price10/10;
   DailyInfo->MA20   = Price20/20;  
   DailyInfo->MA60   = Price60/60;
-  DailyInfo->MA120  = 0;
+  DailyInfo->MA120  = 0;          // No need MA120 now
 }
 
 VOID CalculateRSI(DAILY_INFO * DailyInfo)
 {
   //
-  // Calculate RSI data in DAILY_INFO.
+  // Calculate RSI data write into DAILY_INFO.
   //
-
+  
 }
 
 VOID CalculateKD(DAILY_INFO * DailyInfo)
 {
   //
-  // Calculate KD data in DAILY_INFO.
+  // Calculate KD data write into DAILY_INFO.
   //
-
+  
 }
 
-DAILY_INFO *InitStockDailyInfoData(FILE *XmlPointer , DAILY_INFO * DailyInfoBuffer, SHORT16 days)
+VOID InitStockDailyInfoData(FILE *XmlPointer , DAILY_INFO *DailyInfoBuffer, SHORT16 days)
 {
   //
   // Catch stock Data By ID from XML file, then init the data to struct.
   //
-  
+
   //
   // Reads XML data and write it to DailyInfoBuffer
   //
 
   //
-  // Allcate memory to buffer
+  // Allcate memory to buffer, the first data should 60 days before start day for calculate MA60.
   //
-  
+  DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+60));
+
   //
-  // Calculate MA5 MA10 MA20 MA60 in DailyInfoBuffer
+  // Calculate MA5 MA10 MA20 MA60 write into DailyInfoBuffer
   //
   CalculateMA(DailyInfoBuffer);
 
   //
-  // Calculate KD RSI in DailyInfoBuffer
+  // Calculate KD and RSI write into DailyInfoBuffer
   //
   CalculateRSI(DailyInfoBuffer);
   
   CalculateKD(DailyInfoBuffer);
 
   //
-  // Convert dates to DayIndex in DailyInfoBuffer
+  // Convert dates to DayIndex write into DailyInfoBuffer
   //
   
 }
@@ -218,6 +223,8 @@ SHORT16 FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dai
   SHORT16    BuyPrice;
   bool       MA_check = false;
   bool       LD_check = false;
+  bool       RSI_check = false;
+  bool       KD_check = false;
   
   DailyInfo += StartDayIndex; 
   
@@ -264,9 +271,62 @@ SHORT16 FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dai
   
 }
 
-VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, DAILY_INFO* DailyInfo, SHORT16 *SellDayIndex, SHORT16 *SellPrice)
+VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, DAILY_INFO *DailyInfo, SHORT16 *SellDayIndex, SHORT16 *SellPrice)
 {
   //
   // Find Selling point
   //
+  SHORT16    NewPrice;
+  SHORT16    CurrentIndex;  
+  DAILY_INFO *LastDay;
+  DAILY_INFO *Last2Day;  
+  bool       ConditionCheck = false;
+  bool       RSI_check      = false;
+  bool       KD_check       = false;
+  
+  NewPrice = DailyInfo.Start;
+
+  for (CurrentIndex = BuyDayIndex; CurrentIndex < EndDayIndex; CurrentIndex++)
+  {
+    LastDay = DailyInfo--;
+    Last2Day = LastDay--;
+    NewPrice = DailyInfo.Start;
+    
+    //
+    // Check MA
+    //
+    // 3 Cases of LeaderDifference
+    //  
+    if (LastDay->LeaderDifference < 0 && Last2Day->LeaderDifference < 0) {
+      if(NewPrice < DailyInfo.MA20) {
+        ConditionCheck = true;
+      }  
+    } else if (LastDay->LeaderDifference < 0) {
+      if(NewPrice < DailyInfo.MA10) {
+        ConditionCheck = true;
+      }  
+    } else (LastDay->LeaderDifference >= 0) {
+      if(NewPrice < DailyInfo.MA5) {
+        ConditionCheck = true;
+      }
+    }
+
+    //
+    // Check RSI, KD
+    //
+
+    //
+    // Return day index and Price
+    //
+    if(ConditionCheck)
+    {
+      *SellDayIndex = BuyDayIndex + CurrentIndex;
+      *SellPrice    = NewPrice;
+      break;
+    } else {
+       //
+       // No sell point
+       //
+    }
+  }
 }
