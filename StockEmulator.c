@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include "ezxml.h"
+#define MA5_OVER_MA10 103
+#define STOP_LOSS_LIMIT 15
 
 typedef struct _DailyInfo DAILY_INFO;
 typedef struct _Date DATE;
 typedef struct _Trade_Record  TRADE_RECORD;
 typedef unsigned short SHORT16;
-#define MA5_OVER_MA10 103
-#define STOP_LOSS_LIMIT 15
+
   
 struct _DailyInfo {
    SHORT16 StockID;
@@ -17,7 +19,7 @@ struct _DailyInfo {
    SHORT16 High;
    SHORT16 Low;
 
-   int LeaderDifference;
+   int LeaderDiff;
    int ForeignInvestorsDiff;
    int InvestmentTrustDiff;  
    int DealersDiff;
@@ -68,8 +70,6 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
 
 int Main(int argc, char **argv)
 {
-
-  FILE          *fptr;
   DAILY_INFO    *StockDailyData;
   SHORT16       DayIntervals;
   SHORT16       StartDayIndex;
@@ -80,19 +80,13 @@ int Main(int argc, char **argv)
   // Argument format:
   // StockEmulator.exe [XmlFileName] [Days]
   //
-  
-  fptr = fopen( argv[0],"r" );
-  if (!fptr) {
-    return 1;
-  }
-  
   DayIntervals = argv[1];
 
   //
   // Init the stock data struct
   //
-  InitStockDailyInfoData(fptr, StockDailyData, DayIntervals);
-  fclose(fptr);
+  InitStockDailyInfoData (argv[0], StockDailyData, DayIntervals);
+ 
   //
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
@@ -108,6 +102,53 @@ int Main(int argc, char **argv)
 
   return 0;
 
+}
+
+
+VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT16 days)
+{
+  //
+  // Catch stock data and ID from XML file, then init the data to struct.
+  //
+  ezxml_t XmlFile, Datax, StockIdx, Dailyx, Pricex, Differencex;
+  char *Index, *Yesrs, *Mouths, *Days;
+  char *StartPrice,*EndPrice, *HighPrice, *LowPrice;
+  char *LeaderDiff, *ForeignInvestorsDiff, *InvestmentTrustDiff, *DealersDiff;
+  
+  XmlFile      = ezxml_parse_file (FileName);
+  Datax        = ezxml_child(XmlFile,"StockData");
+  StockIdx     = ezxml_child(Datax,"StockId"); 
+  Dailyx       = ezxml_child(Datax,"Daily");
+  Pricex       = ezxml_child(Datax,"Price");
+  Differencex  = ezxml_child(Datax,"Difference");
+  
+  //
+  // Allcate memory to buffer, the first data should 60 days before start day for calculate MA60.
+  //
+  DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+60));
+
+  //
+  // Parsing XML data and write it to DailyInfoBuffer
+  //
+
+
+  //
+  // Calculate MA5 MA10 MA20 MA60 write into DailyInfoBuffer
+  //
+  CalculateMA (DailyInfoBuffer);
+
+  //
+  // Calculate KD and RSI write into DailyInfoBuffer
+  //
+  CalculateRSI (DailyInfoBuffer);
+  
+  CalculateKD (DailyInfoBuffer);
+
+  //
+  // Update Dates and DayIndex in DailyInfoBuffer
+  //
+  
+  ezxml_free (XmlFile);
 }
 
 VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead)
@@ -221,40 +262,6 @@ VOID CalculateKD(DAILY_INFO * DailyInfo)
   
 }
 
-VOID InitStockDailyInfoData(FILE *XmlPointer , DAILY_INFO *DailyInfoBuffer, SHORT16 days)
-{
-  //
-  // Catch stock data and ID from XML file, then init the data to struct.
-  //
-
-  //
-  // Allcate memory to buffer, the first data should 60 days before start day for calculate MA60.
-  //
-  DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+60));
-  
-  //
-  // Parsing XML data and write it to DailyInfoBuffer
-  //
-
-
-  //
-  // Calculate MA5 MA10 MA20 MA60 write into DailyInfoBuffer
-  //
-  CalculateMA(DailyInfoBuffer);
-
-  //
-  // Calculate KD and RSI write into DailyInfoBuffer
-  //
-  CalculateRSI(DailyInfoBuffer);
-  
-  CalculateKD(DailyInfoBuffer);
-
-  //
-  // Update Dates and DayIndex in DailyInfoBuffer
-  //
-  
-}
-
 VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice)
 {
   //
@@ -293,7 +300,7 @@ VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyI
     //
     // Check LeaderDifference, should be a postive number 2 days.
     //
-    if(LastDay->LeaderDifference >0 && Last2Day->LeaderDifference >0)
+    if(LastDay->LeaderDiff >0 && Last2Day->LeaderDiff >0)
     {
        LD_check = true;
     }
@@ -351,15 +358,15 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
     //
     // 3 Cases of LeaderDifference
     //  
-    if (LastDay->LeaderDifference < 0 && Last2Day->LeaderDifference < 0) {
+    if (LastDay->LeaderDiff < 0 && Last2Day->LeaderDiff < 0) {
       if(NewPrice < LastDay.MA20) {
         ConditionCheck = true;
       }  
-    } else if (LastDay->LeaderDifference < 0) {
+    } else if (LastDay->LeaderDiff < 0) {
       if(NewPrice < LastDay.MA10) {
         ConditionCheck = true;
       }  
-    } else (LastDay->LeaderDifference >= 0) {
+    } else (LastDay->LeaderDiff >= 0) {
       if(NewPrice < LastDay.MA5) {
         ConditionCheck = true;
       }
