@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "ezxml.h"
+
 #define MA5_OVER_MA10 103
 #define STOP_LOSS_LIMIT 15
 #define FIRST_DAILY_DATA 60 /*For MA calculate*/
@@ -11,7 +12,6 @@ typedef struct _Date DATE;
 typedef struct _Trade_Record  TRADE_RECORD;
 typedef unsigned short SHORT16;
 
-  
 struct _DailyInfo {
    SHORT16 StockID;
 
@@ -49,7 +49,7 @@ struct _Date {
 struct _Trade_Record {
   SHORT16       BuyDayIndex;
   SHORT16       SellDayIndex;
-  
+
   SHORT16       BuyPrice;
   SHORT16       SellPrice;
 
@@ -76,7 +76,7 @@ int Main(int argc, char **argv)
   SHORT16       StartDayIndex;
   SHORT16       EndDayIndex;
   TRADE_RECORD  *ReturnRecords;
-  
+
   // 
   // Argument format:
   // StockEmulator.exe [XmlFileName] [Days]
@@ -87,7 +87,7 @@ int Main(int argc, char **argv)
   // Init the stock data struct
   //
   InitStockDailyInfoData (argv[0], StockDailyData, DayIntervals);
- 
+
   //
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
@@ -102,7 +102,7 @@ int Main(int argc, char **argv)
   AnalysisProfit (ReturnRecords);
 
   free(StockDailyData);
-  
+
   return 0;
 }
 
@@ -112,28 +112,28 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   //
   // Catch stock data and ID from XML file, then init the data to struct.
   //
-  ezxml_t  XmlFile, Datax, StockIdx, Dailyx, Pricex, Differencex;
-  char *LeaderDiff, *ForeignInvestorsDiff, *InvestmentTrustDiff, *DealersDiff;     /*Might be negative number*/
-  char *LeaderDiff2, *ForeignInvestorsDiff2, *InvestmentTrustDiff2, *DealersDiff2; /*Postive number*/  
+  ezxml_t  XmlFile, StockDatax, StockIdx, Dailyx, Pricex, Differencex;
+  char     *LeaderDiff, *ForeignInvestorsDiff, *InvestmentTrustDiff, *DealersDiff;     /*Might be negative number*/
+  char     *LeaderDiff2, *ForeignInvestorsDiff2, *InvestmentTrustDiff2, *DealersDiff2; /*Postive number*/  
   SHORT16  IndexDay,i,j; 
-  
+
   XmlFile      = ezxml_parse_file (FileName);
-  Datax        = ezxml_child (XmlFile,"StockData");
-  StockIdx     = ezxml_child (Datax,"StockId"); 
-  Dailyx       = ezxml_child (Datax,"Daily");
-  Pricex       = ezxml_child (Datax,"Price");
-  Differencex  = ezxml_child (Datax,"Difference");
-  
+  StockDatax   = ezxml_child (XmlFile,"StockData");
+  StockIdx     = ezxml_child (StockDatax,"StockId"); 
+  Dailyx       = ezxml_child (StockDatax,"Daily");
   //
   // Allcate memory to buffer, the first data should 60 (depends on FIRST_DAILY_DATA) days before start day for calculate MA60 (depends on FIRST_DAILY_DATA) .
   //
   DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA));
-  
+
   //
   // Parsing XML data and write into DailyInfoBuffer
   //
   for(IndexDay = 0; IndexDay < days+FIRST_DAILY_DATA; IndexDay++)
   {
+    Pricex       = ezxml_child (Dailyx,"Price");
+    Differencex  = ezxml_child (Dailyx,"Difference");
+
     DailyInfoBuffer->StockId               = StockIdx->txt;
     DailyInfoBuffer->DayIndex              = Index;
     DailyInfoBuffer->Dates.Years           = atoi(ezxml_attr(Dailyx,"Years"));
@@ -143,7 +143,7 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
     DailyInfoBuffer->End                   = atoi(ezxml_attr(Pricex, "End"));
     DailyInfoBuffer->High                  = atoi(ezxml_attr(Pricex, "High"));
     DailyInfoBuffer->Low                   = atoi(ezxml_attr(Pricex, "Low"));
-    
+
     //
     // Check if it's a negative number
     //
@@ -176,6 +176,8 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
     DailyInfoBuffer->ForeignInvestorsDiff  = strstr(ForeignInvestorsDiff,"-") ? -atoi(ForeignInvestorsDiff2) : atoi(ForeignInvestorsDiff);
     DailyInfoBuffer->InvestmentTrustDiff   = strstr(InvestmentTrustDiff,"-") ? -atoi(InvestmentTrustDiff2) : atoi(InvestmentTrustDiff);
     DailyInfoBuffer->DealersDiff           = strstr(DealersDiff,"-") ? -atoi(DealersDiff2) : atoi(DealersDiff);
+
+    Dailyx = Dailyx->next;
   }
 
   //
@@ -187,9 +189,9 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   // Calculate KD and RSI write into DailyInfoBuffer
   //
   CalculateRSI (DailyInfoBuffer, days);
-  
+
   CalculateKD (DailyInfoBuffer, days);
-  
+
   ezxml_free (XmlFile);
 }
 
@@ -201,7 +203,7 @@ VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dail
   SHORT16       SellDayIndex;
   SHORT16       SellPrice;
   SHORT16       Count;
-    
+
   TRADE_RECORD  *OldRecords;
   TRADE_RECORD  *NewRecords; 
 
@@ -243,10 +245,8 @@ VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dail
     // Next time StartDayIndex equals SellDayIndex at this times
     //
     StartDayIndex1 = SellDayIndex;
-
     Count++;
   }
-
 }
 
 VOID CalculateMA(DAILY_INFO *DailyInfo, SHORT16 days)
@@ -273,19 +273,19 @@ VOID CalculateMA(DAILY_INFO *DailyInfo, SHORT16 days)
     for(MAIndex = 0; MAIndex < 5; MAIndex ++) {
       Price5 += (DailyInfo-MAIndex)->End;
     }
-    
+
     for(MAIndex = 0; MAIndex < 10; MAIndex ++) {
       Price10 += (DailyInfo-MAIndex)->End;
     }
-    
+
     for(MAIndex = 0; MAIndex < 20; MAIndex ++) {
       Price20 += (DailyInfo-MAIndex)->End;
     }
-  
+
     for(MAIndex = 0; MAIndex < 60; MAIndex ++) {
       Price60 += (DailyInfo-MAIndex)->End;
     }
-    
+
     for(MAIndex = 0; MAIndex < 120; MAIndex ++) {
       Price120 += (DailyInfo-MAIndex)->End;
     }
@@ -305,10 +305,8 @@ VOID CalculateMA(DAILY_INFO *DailyInfo, SHORT16 days)
     if(FIRST_DAILY_DATA >= 120){
       DailyInfoPtr->MA120  = Price120/120;
     }
-    
     DailyInfoPtr++;
   }
-
 }
 
 VOID CalculateRSI(DAILY_INFO * DailyInfo, SHORT16 days)
@@ -316,7 +314,7 @@ VOID CalculateRSI(DAILY_INFO * DailyInfo, SHORT16 days)
   //
   // Calculate RSI data write into DAILY_INFO.
   //
-  
+
 }
 
 VOID CalculateKD(DAILY_INFO * DailyInfo, SHORT16 days)
@@ -324,7 +322,7 @@ VOID CalculateKD(DAILY_INFO * DailyInfo, SHORT16 days)
   //
   // Calculate KD data write into DAILY_INFO.
   //
-  
+
 }
 
 VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice)
@@ -385,7 +383,6 @@ VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyI
       break;
     }
   }
-  
 }
 
 VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, DAILY_INFO *DailyInfo, SHORT16 *SellDayIndex, SHORT16 *SellPrice)
@@ -456,7 +453,6 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
        //
     }
   }
-  
 }
 
 VOID AnalysisProfit (TRADE_RECORD  *TradeRecords)
