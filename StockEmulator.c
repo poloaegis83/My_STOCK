@@ -101,6 +101,8 @@ int Main(int argc, char **argv)
   //
   AnalysisProfit (ReturnRecords);
 
+  free(StockDailyData);
+  
   return 0;
 }
 
@@ -111,7 +113,9 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   // Catch stock data and ID from XML file, then init the data to struct.
   //
   ezxml_t  XmlFile, Datax, StockIdx, Dailyx, Pricex, Differencex;
-  SHORT16  Index; 
+  char *LeaderDiff, *ForeignInvestorsDiff, *InvestmentTrustDiff, *DealersDiff;     /*Might be negative number*/
+  char *LeaderDiff2, *ForeignInvestorsDiff2, *InvestmentTrustDiff2, *DealersDiff2; /*Postive number*/  
+  SHORT16  IndexDay,i,j; 
   
   XmlFile      = ezxml_parse_file (FileName);
   Datax        = ezxml_child (XmlFile,"StockData");
@@ -124,11 +128,11 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   // Allcate memory to buffer, the first data should 60 (depends on FIRST_DAILY_DATA) days before start day for calculate MA60 (depends on FIRST_DAILY_DATA) .
   //
   DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA));
-
+  
   //
   // Parsing XML data and write into DailyInfoBuffer
   //
-  for(Index = 0; Index < days+FIRST_DAILY_DATA; Index++)
+  for(IndexDay = 0; IndexDay < days+FIRST_DAILY_DATA; IndexDay++)
   {
     DailyInfoBuffer->StockId               = StockIdx->txt;
     DailyInfoBuffer->DayIndex              = Index;
@@ -139,10 +143,39 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
     DailyInfoBuffer->End                   = atoi(ezxml_attr(Pricex, "End"));
     DailyInfoBuffer->High                  = atoi(ezxml_attr(Pricex, "High"));
     DailyInfoBuffer->Low                   = atoi(ezxml_attr(Pricex, "Low"));
-    DailyInfoBuffer->LeaderDiff            = atoi(ezxml_attr(Differencex, "LeaderDiff"));
-    DailyInfoBuffer->ForeignInvestorsDiff  = atoi(ezxml_attr(Differencex, "ForeignInvestorsDiff"));
-    DailyInfoBuffer->InvestmentTrustDiff   = atoi(ezxml_attr(Differencex, "InvestmentTrustDiff"));
-    DailyInfoBuffer->DealersDiff           = atoi(ezxml_attr(Differencex, "DealersDiff"));
+    
+    //
+    // Check if it's a negative number
+    //
+    if(strstr(LeaderDiff,"-")){
+      for(i=strlen(LeaderDiff)-1,j=0;i>=0;i--){
+          LeaderDiff2[j]=LeaderDiff[i];
+          j++;
+      }
+    }
+    if(strstr(ForeignInvestorsDiff,"-")){
+      for(i=strlen(ForeignInvestorsDiff)-1,j=0;i>=0;i--){
+          ForeignInvestorsDiff2[j]=ForeignInvestorsDiff[i];
+          j++;
+      }
+    }
+    if(strstr(InvestmentTrustDiff,"-")){
+      for(i=strlen(InvestmentTrustDiff)-1,j=0;i>=0;i--){
+          InvestmentTrustDiff2[j]=InvestmentTrustDiff[i];
+          j++;
+      }
+    }
+    if(strstr(DealersDiff,"-")){
+      for(i=strlen(DealersDiff)-1,j=0;i>=0;i--){
+          DealersDiff2[j]=DealersDiff[i];
+          j++;
+      }
+    }
+
+    DailyInfoBuffer->LeaderDiff            = strstr(LeaderDiff,"-") ?   -atoi(LeaderDiff2): atoi(LeaderDiff);
+    DailyInfoBuffer->ForeignInvestorsDiff  = strstr(ForeignInvestorsDiff,"-") ? -atoi(ForeignInvestorsDiff2) : atoi(ForeignInvestorsDiff);
+    DailyInfoBuffer->InvestmentTrustDiff   = strstr(InvestmentTrustDiff,"-") ? -atoi(InvestmentTrustDiff2) : -atoi(InvestmentTrustDiff);
+    DailyInfoBuffer->DealersDiff           = strstr(DealersDiff,"-") ? -atoi(DealersDiff2) : -atoi(DealersDiff);
   }
 
   //
@@ -156,10 +189,6 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   CalculateRSI (DailyInfoBuffer, days);
   
   CalculateKD (DailyInfoBuffer, days);
-
-  //
-  // Update Dates and DayIndex in DailyInfoBuffer
-  //
   
   ezxml_free (XmlFile);
 }
