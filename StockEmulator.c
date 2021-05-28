@@ -4,7 +4,7 @@
 #include "ezxml.h"
 #define MA5_OVER_MA10 103
 #define STOP_LOSS_LIMIT 15
-#define FIRST_DAILY_DATA 60
+#define FIRST_DAILY_DATA 60 /*For MA calculate*/
 
 typedef struct _DailyInfo DAILY_INFO;
 typedef struct _Date DATE;
@@ -115,18 +115,15 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   //
   // Catch stock data and ID from XML file, then init the data to struct.
   //
-  ezxml_t XmlFile, Datax, StockIdx, Dailyx, Pricex, Differencex;
-  char *Index, *Yesrs, *Mouths, *Days;
-  char *StartPrice,*EndPrice, *HighPrice, *LowPrice;
-  char *LeaderDiff, *ForeignInvestorsDiff, *InvestmentTrustDiff, *DealersDiff;
-  SHORT16 Index; 
+  ezxml_t  XmlFile, Datax, StockIdx, Dailyx, Pricex, Differencex;
+  SHORT16  Index; 
   
   XmlFile      = ezxml_parse_file (FileName);
-  Datax        = ezxml_child(XmlFile,"StockData");
-  StockIdx     = ezxml_child(Datax,"StockId"); 
-  Dailyx       = ezxml_child(Datax,"Daily");
-  Pricex       = ezxml_child(Datax,"Price");
-  Differencex  = ezxml_child(Datax,"Difference");
+  Datax        = ezxml_child (XmlFile,"StockData");
+  StockIdx     = ezxml_child (Datax,"StockId"); 
+  Dailyx       = ezxml_child (Datax,"Daily");
+  Pricex       = ezxml_child (Datax,"Price");
+  Differencex  = ezxml_child (Datax,"Difference");
   
   //
   // Allcate memory to buffer, the first data should 60 days before start day for calculate MA60.
@@ -134,8 +131,24 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+60));
 
   //
-  // Parsing XML data and write it to DailyInfoBuffer
+  // Parsing XML data and write into DailyInfoBuffer
   //
+  for(Index = 0; Index < days+FIRST_DAILY_DATA; Index++)
+  {
+    DailyInfoBuffer->StockId               = StockIdx->txt;
+    DailyInfoBuffer->DayIndex              = Index;
+    DailyInfoBuffer->Dates.Years           = atoi(ezxml_attr(Dailyx,"Years"));
+    DailyInfoBuffer->Dates.Mouths          = atoi(ezxml_attr(Dailyx,"Mouths"));
+    DailyInfoBuffer->Dates.Days            = atoi(ezxml_attr(Dailyx,"Days"));
+    DailyInfoBuffer->Start                 = atoi(ezxml_attr(Pricex, "Start"));
+    DailyInfoBuffer->End                   = atoi(ezxml_attr(Pricex, "End"));
+    DailyInfoBuffer->High                  = atoi(ezxml_attr(Pricex, "High"));
+    DailyInfoBuffer->Low                   = atoi(ezxml_attr(Pricex, "Low"));
+    DailyInfoBuffer->LeaderDiff            = atoi(ezxml_attr(Differencex, "LeaderDiff"));
+    DailyInfoBuffer->ForeignInvestorsDiff  = atoi(ezxml_attr(Differencex, "ForeignInvestorsDiff"));
+    DailyInfoBuffer->InvestmentTrustDiff   = atoi(ezxml_attr(Differencex, "InvestmentTrustDiff"));
+    DailyInfoBuffer->DealersDiff           = atoi(ezxml_attr(Differencex, "DealersDiff"));
+  }
 
   //
   // Calculate MA5 MA10 MA20 MA60 write into DailyInfoBuffer
@@ -439,7 +452,6 @@ VOID AnalysisProfit (TRADE_RECORD  *TradeRecords)
      } else {
        LoseMoney += (TradeRecords->BuyPrice - TradeRecords->SellPrice);
      }
-
      Count++;
    }
 }
