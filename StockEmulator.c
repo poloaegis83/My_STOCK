@@ -174,8 +174,8 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
 
     DailyInfoBuffer->LeaderDiff            = strstr(LeaderDiff,"-") ?   -atoi(LeaderDiff2): atoi(LeaderDiff);
     DailyInfoBuffer->ForeignInvestorsDiff  = strstr(ForeignInvestorsDiff,"-") ? -atoi(ForeignInvestorsDiff2) : atoi(ForeignInvestorsDiff);
-    DailyInfoBuffer->InvestmentTrustDiff   = strstr(InvestmentTrustDiff,"-") ? -atoi(InvestmentTrustDiff2) : -atoi(InvestmentTrustDiff);
-    DailyInfoBuffer->DealersDiff           = strstr(DealersDiff,"-") ? -atoi(DealersDiff2) : -atoi(DealersDiff);
+    DailyInfoBuffer->InvestmentTrustDiff   = strstr(InvestmentTrustDiff,"-") ? -atoi(InvestmentTrustDiff2) : atoi(InvestmentTrustDiff);
+    DailyInfoBuffer->DealersDiff           = strstr(DealersDiff,"-") ? -atoi(DealersDiff2) : atoi(DealersDiff);
   }
 
   //
