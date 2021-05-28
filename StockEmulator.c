@@ -121,9 +121,9 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   Differencex  = ezxml_child (Datax,"Difference");
   
   //
-  // Allcate memory to buffer, the first data should 60 days before start day for calculate MA60.
+  // Allcate memory to buffer, the first data should 60 (depends on FIRST_DAILY_DATA) days before start day for calculate MA60 (depends on FIRST_DAILY_DATA) .
   //
-  DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+60));
+  DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA));
 
   //
   // Parsing XML data and write into DailyInfoBuffer
