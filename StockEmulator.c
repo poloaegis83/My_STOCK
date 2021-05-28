@@ -92,11 +92,7 @@ int Main(int argc, char **argv)
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
   ReturnRecords = NULL;
-  
-  //
-  // Start from 60 days
-  //
-  StartDayIndex = FIRST_DAILY_DATA;
+  StartDayIndex = FIRST_DAILY_DATA;  /*Start from 60 days*/
   EndDayIndex = StartDayIndex + DayIntervals;
   StockSimulator (StartDayIndex, EndDayIndex, StockDailyData, ReturnRecords);
 
@@ -106,7 +102,6 @@ int Main(int argc, char **argv)
   AnalysisProfit (ReturnRecords);
 
   return 0;
-
 }
 
 
