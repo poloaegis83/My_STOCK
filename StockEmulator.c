@@ -4,6 +4,7 @@
 #include "ezxml.h"
 #define MA5_OVER_MA10 103
 #define STOP_LOSS_LIMIT 15
+#define FIRST_DAILY_DATA 60
 
 typedef struct _DailyInfo DAILY_INFO;
 typedef struct _Date DATE;
@@ -61,9 +62,9 @@ struct _Trade_Record {
 VOID InitStockDailyInfoData (FILE *XmlPointer, DAILY_INFO *DailyInfoBuffer, SHORT16 days);
 VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead);
 VOID AnalysisProfit (TRADE_RECORD  *TradeRecords);
-VOID CalculateMA(DAILY_INFO * DailyInfo);
-VOID CalculateRSI(DAILY_INFO * DailyInfo);
-VOID CalculateKD(DAILY_INFO * DailyInfo);
+VOID CalculateMA(DAILY_INFO * DailyInfo, SHORT16 days);
+VOID CalculateRSI(DAILY_INFO * DailyInfo, SHORT16 days);
+VOID CalculateKD(DAILY_INFO * DailyInfo, SHORT16 days);
 VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice);
 VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, DAILY_INFO *DailyInfo, SHORT16 *SellDayIndex, SHORT16 *SellPrice);
 
@@ -71,7 +72,7 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
 int Main(int argc, char **argv)
 {
   DAILY_INFO    *StockDailyData;
-  SHORT16       DayIntervals;
+  SHORT16       DayIntervals;    //Tatol days for emulator
   SHORT16       StartDayIndex;
   SHORT16       EndDayIndex;
   TRADE_RECORD  *ReturnRecords;
@@ -91,7 +92,11 @@ int Main(int argc, char **argv)
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
   ReturnRecords = NULL;
-  StartDayIndex = 0;
+  
+  //
+  // Start from 60 days
+  //
+  StartDayIndex = FIRST_DAILY_DATA;
   EndDayIndex = StartDayIndex + DayIntervals;
   StockSimulator (StartDayIndex, EndDayIndex, StockDailyData, ReturnRecords);
 
@@ -114,6 +119,7 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   char *Index, *Yesrs, *Mouths, *Days;
   char *StartPrice,*EndPrice, *HighPrice, *LowPrice;
   char *LeaderDiff, *ForeignInvestorsDiff, *InvestmentTrustDiff, *DealersDiff;
+  SHORT16 Index; 
   
   XmlFile      = ezxml_parse_file (FileName);
   Datax        = ezxml_child(XmlFile,"StockData");
@@ -131,18 +137,17 @@ VOID InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT1
   // Parsing XML data and write it to DailyInfoBuffer
   //
 
-
   //
   // Calculate MA5 MA10 MA20 MA60 write into DailyInfoBuffer
   //
-  CalculateMA (DailyInfoBuffer);
+  CalculateMA (DailyInfoBuffer, days);
 
   //
   // Calculate KD and RSI write into DailyInfoBuffer
   //
-  CalculateRSI (DailyInfoBuffer);
+  CalculateRSI (DailyInfoBuffer, days);
   
-  CalculateKD (DailyInfoBuffer);
+  CalculateKD (DailyInfoBuffer, days);
 
   //
   // Update Dates and DayIndex in DailyInfoBuffer
@@ -207,7 +212,7 @@ VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dail
 
 }
 
-VOID CalculateMA(DAILY_INFO * DailyInfo)
+VOID CalculateMA(DAILY_INFO *DailyInfo, SHORT16 days)
 {
   //
   // Calculate MA data write into DAILY_INFO.
@@ -215,38 +220,61 @@ VOID CalculateMA(DAILY_INFO * DailyInfo)
   SHORT16       Price5;
   SHORT16       Price10;
   SHORT16       Price20;
-  SHORT16       Price60;   
-  char          Index;
-
+  SHORT16       Price60;
+  SHORT16       Price120;   
+  SHORT16       MAIndex;
+  SHORT16       DailyIndex;
+  DAILY_INFO    *DailyInfoPtr;
   //
   // Todo: Need add error handle here
   //
 
+  DailyInfoPtr = DailyInfo + FIRST_DAILY_DATA;
 
-  for(Index = 0; Index < 5; Index ++) {
-    Price5 += (DailyInfo-Index)->End;
-  }
+  for(DailyIndex = 0; DailyIndex < days; DailyIndex++)
+  {    
+    for(MAIndex = 0; MAIndex < 5; MAIndex ++) {
+      Price5 += (DailyInfo-MAIndex)->End;
+    }
+    
+    for(MAIndex = 0; MAIndex < 10; MAIndex ++) {
+      Price10 += (DailyInfo-MAIndex)->End;
+    }
+    
+    for(MAIndex = 0; MAIndex < 20; MAIndex ++) {
+      Price20 += (DailyInfo-MAIndex)->End;
+    }
   
-  for(Index = 0; Index < 10; Index ++) {
-    Price10 += (DailyInfo-Index)->End;
-  }
-  
-  for(Index = 0; Index < 20; Index ++) {
-    Price20 += (DailyInfo-Index)->End;
+    for(MAIndex = 0; MAIndex < 60; MAIndex ++) {
+      Price60 += (DailyInfo-MAIndex)->End;
+    }
+    
+    for(MAIndex = 0; MAIndex < 120; MAIndex ++) {
+      Price120 += (DailyInfo-MAIndex)->End;
+    }
+
+    if(FIRST_DAILY_DATA >= 5){
+      DailyInfoPtr->MA5    = Price5/5;
+    }
+    if(FIRST_DAILY_DATA >= 10){
+      DailyInfoPtr->MA10   = Price10/10;
+    }
+    if(FIRST_DAILY_DATA >= 20){
+      DailyInfoPtr->MA20   = Price20/20;
+    }
+    if(FIRST_DAILY_DATA >= 60){
+      DailyInfoPtr->MA60   = Price60/60;
+    }
+    if(FIRST_DAILY_DATA >= 120){
+      DailyInfoPtr->MA120  = Price120/120;
+    }
+    
+    DailyInfoPtr++;
   }
 
-  for(Index = 0; Index < 60; Index ++) {
-    Price60 += (DailyInfo-Index)->End;
-  }
-  
-  DailyInfo->MA5    = Price5/5;
-  DailyInfo->MA10   = Price10/10;
-  DailyInfo->MA20   = Price20/20;  
-  DailyInfo->MA60   = Price60/60;
-  DailyInfo->MA120  = 0;          // No need MA120 now
 }
 
-VOID CalculateRSI(DAILY_INFO * DailyInfo)
+VOID CalculateRSI(DAILY_INFO * DailyInfo, SHORT16 days)
 {
   //
   // Calculate RSI data write into DAILY_INFO.
@@ -254,7 +282,7 @@ VOID CalculateRSI(DAILY_INFO * DailyInfo)
   
 }
 
-VOID CalculateKD(DAILY_INFO * DailyInfo)
+VOID CalculateKD(DAILY_INFO * DailyInfo, SHORT16 days)
 {
   //
   // Calculate KD data write into DAILY_INFO.
