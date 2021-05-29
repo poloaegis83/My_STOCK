@@ -1,23 +1,3 @@
-import requests
-import pandas as pd
-import json
-import numpy as np
-import datetime
-
-def crawl_price(stock_id):
-
-    d = datetime.datetime.now()
-    url = "https://query1.finance.yahoo.com/v8/finance/chart/"+stock_id+"?period1=0&period2="+str(int(d.timestamp()))+"&interval=1d&events=history&=hP2rOschxO0"
-
-    res = requests.get(url)
-    data = json.loads(res.text)
-    df = pd.DataFrame(data['chart']['result'][0]['indicators']['quote'][0], index=pd.to_datetime(np.array(data['chart']['result'][0]['timestamp'])*1000*1000*1000))
-    return df
-
-df = crawl_price("2330.TW")
-df.close.plot()
-
-
 import os
 import requests
 import json
@@ -29,16 +9,43 @@ headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 stock_id = input ("請輸入股票代碼(ex:2330):")
 year = input ("請輸入year")
-mouth = input ("請輸入mouth")
+month = input ("請輸入mouth")
 print(stock_id)
-
-url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=html&date="+year+""+mouth+"01&stockNo="+stock_id
+yearint = int(year)
+yearint -= 1911
+year = str(yearint)
+#url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=html&date="+year+""+mouth+"01&stockNo="+stock_id
+url = "https://stock.wearn.com/cdata.asp?year="+year+"&month="+month+"&kind="+stock_id
+#https://stock.wearn.com/netbuy.asp?Year=108&month=05&kind=2330
+#https://stock.wearn.com/zhuli.asp?Year=110&month=05&kind=2330
 print(url)
 res = requests.get (url, headers = headers)
-res.encoding = "utf-8"
+print(res.encoding) #查看網頁返回的字符集類型 
+print(res.apparent_encoding) #自動判斷字符集類型
+res.encoding = 'cp950'
 
 soup = BeautifulSoup (res.text, "html.parser")
-print(soup.prettify())
+#print(soup.prettify())
+
+title_tag = soup.title
+print(title_tag)
+
+a_tags = soup.find_all('stockalllistbg1')
+
+for tag in a_tags:
+  # 輸出超連結的文字
+  print(tag.string)
+
+link2_tag = soup.find_all(class_='stockalllistbg1')
+print(link2_tag)
+
+link2_tag = soup.find_all(class_='stockalllistbg2')
+print(link2_tag)
+
+for tag in link2_tag:
+  # 輸出超連結的文字
+  print(tag.string)
+
 
 os.mknod('test.xml')
 os.remove('test.xml')
