@@ -16,3 +16,29 @@ def crawl_price(stock_id):
 
 df = crawl_price("2330.TW")
 df.close.plot()
+
+
+import os
+import requests
+import json
+import numpy    as np
+import pandas   as pd
+from   bs4      import BeautifulSoup
+
+headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
+
+stock_id = input ("請輸入股票代碼(ex:2330):")
+year = input ("請輸入year")
+mouth = input ("請輸入mouth")
+print(stock_id)
+
+url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=html&date="+year+""+mouth+"01&stockNo="+stock_id
+print(url)
+res = requests.get (url, headers = headers)
+res.encoding = "utf-8"
+
+soup = BeautifulSoup (res.text, "html.parser")
+print(soup.prettify())
+
+os.mknod('test.xml')
+os.remove('test.xml')
