@@ -60,13 +60,13 @@ struct _Trade_Record {
 };
 
 VOID InitStockDailyInfoData (FILE *XmlPointer, DAILY_INFO *DailyInfoBuffer, SHORT16 days);
-VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead);
+VOID StockSimulator (SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead);
 VOID AnalysisProfit (TRADE_RECORD  *TradeRecords);
-VOID CalculateMA(DAILY_INFO * DailyInfo, SHORT16 days);
-VOID CalculateRSI(DAILY_INFO * DailyInfo, SHORT16 days);
-VOID CalculateKD(DAILY_INFO * DailyInfo, SHORT16 days);
-VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice);
-VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, DAILY_INFO *DailyInfo, SHORT16 *SellDayIndex, SHORT16 *SellPrice);
+VOID CalculateMA (DAILY_INFO * DailyInfo, SHORT16 days);
+VOID CalculateRSI (DAILY_INFO * DailyInfo, SHORT16 days);
+VOID CalculateKD (DAILY_INFO * DailyInfo, SHORT16 days);
+VOID FindBuyPoint (SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice);
+VOID FindSellPoint (SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, DAILY_INFO *DailyInfo, SHORT16 *SellDayIndex, SHORT16 *SellPrice);
 
 
 int Main(int argc, char **argv)
@@ -221,8 +221,10 @@ VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dail
     //
     FindBuyPoint(StartDayIndex1, EndDayIndex, DailyInfo, &BuyDayIndex, &BuyPrice);
 
-    FindSellPoint(BuyDayIndex, EndDayIndex, BuyPrice, DailyInfo &SellDayIndex, &SellPrice);
-
+    if (BuyDayIndex != 0 && BuyPrice != 0)
+    {
+      FindSellPoint(BuyDayIndex, EndDayIndex, BuyPrice, DailyInfo &SellDayIndex, &SellPrice);           
+    }
     //
     // Record trade events
     //
@@ -246,6 +248,11 @@ VOID StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* Dail
     //
     StartDayIndex1 = SellDayIndex;
     Count++;
+
+    if ( (BuyDayIndex != 0 && BuyPrice != 0) || (SellDayIndex != 0 && SellPrice != 0)) /*no buy or sell info*/
+    {
+      break;
+    }
   }
 }
 
@@ -382,6 +389,14 @@ VOID FindBuyPoint(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyI
       *BuyPrice    = NewPrice;
       break;
     }
+    else
+    {
+       //
+       // No buy point
+       //
+       *BuyDayIndex = 0;
+       *BuyPrice    = 0;
+    }
   }
 }
 
@@ -397,7 +412,7 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
   bool       ConditionCheck = false;
   bool       RSI_check      = false;
   bool       KD_check       = false;
-  
+
   NewPrice = DailyInfo.Start;
 
   for (CurrentIndex = BuyDayIndex; CurrentIndex < EndDayIndex; CurrentIndex++)
@@ -451,6 +466,8 @@ VOID FindSellPoint(SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, D
        //
        // No sell point
        //
+       *SellDayIndex = 0;
+       *SellPrice    = 0;
     }
   }
 }
@@ -463,15 +480,24 @@ VOID AnalysisProfit (TRADE_RECORD  *TradeRecords)
 
    EarnedMoney = 0;
    LoseMoney   = 0;
-   
+   Count       = 0;
+
    while(TradeRecords->Next != NULL) 
    {
-     if(TradeRecords->BuyPrice >= TradeRecords->SellPrice)
+     printf("TradeRecords count %d \n", count);
+
+     if((TradeRecords->BuyPrice != 0 || TradeRecords->ButDayIndex != 0) && (TradeRecords->SellPrice != 0 || TradeRecords->SellDayIndex != 0)) /*if buy point and sell point exist*/ 
      {
-       EarnedMoney += (TradeRecords->SellPrice - TradeRecords->BuyPrice);
-     } else {
-       LoseMoney += (TradeRecords->BuyPrice - TradeRecords->SellPrice);
+       printf("Buy: DayIndex:%d, price:%d |||||| Sell: DayIndex:%d, price:%d %d \n", TradeRecords->BuyDayIndex, TradeRecords->BuyPrice, TradeRecords->SellDayIndex, TradeRecords->SellPrice);                         
+       if(TradeRecords->BuyPrice >= TradeRecords->SellPrice)
+       {
+         EarnedMoney += (TradeRecords->SellPrice - TradeRecords->BuyPrice);
+         printf("EarnedMoney = %d\n",TradeRecords->SellPrice - TradeRecords->BuyPrice);
+       } else {
+         LoseMoney += (TradeRecords->BuyPrice - TradeRecords->SellPrice);
+         printf("LoseMoney = %d\n",TradeRecords->BuyPrice - TradeRecords->SellPrice);         
+       }
+       Count++;
      }
-     Count++;
    }
 }
