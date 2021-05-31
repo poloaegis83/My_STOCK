@@ -88,14 +88,14 @@ for tr1,tr2,tr3 in zip(tab[0].findAll('tr'), tab[1].findAll('tr'), tab[2].findAl
         l += 1
     i += 1
 
-# XML 檔案
+# 建立 XML 檔案
 tree = ET.ElementTree(StockData)
 tree.write("test.xml",xml_declaration=True,encoding='UTF-8',method="xml")
 
 # 讀取 XML 檔案
 root = etree.parse("test.xml")
 
-# 輸出排版的 XML 資料
+# 輸出與排版 XML 資料
 print(etree.tostring(root, pretty_print=True, encoding="unicode"))
 
 # 將排版的 XML 資料寫入檔案
