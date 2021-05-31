@@ -68,7 +68,7 @@ for tr1,tr2,tr3 in zip(tab[0].findAll('tr'), tab[1].findAll('tr'), tab[2].findAl
             if j % 6 == 3:  # 最高
                 Price.set('High',(td.getText().rstrip()).replace('.',"") )
             if j % 6 == 4:  # 最低
-                Price.set('low'',(td.getText().rstrip()).replace('.',"") )              
+                Price.set('low',(td.getText().rstrip()).replace('.',"") )              
             if j % 6 == 5:  # 收盤             
                 Price.set('End',(td.getText().rstrip()).replace('.',"") )
         j += 1
