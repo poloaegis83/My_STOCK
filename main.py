@@ -1,8 +1,4 @@
-import os
 import requests
-import json
-import numpy    as np
-import pandas   as pd
 import xml.etree.cElementTree as ET
 import lxml.etree as etree
 from   bs4      import BeautifulSoup
