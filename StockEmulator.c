@@ -1,9 +1,12 @@
-#include "ezxml.h"
+#include "expat.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #define MA5_OVER_MA10 103
 #define STOP_LOSS_LIMIT 15
 #define FIRST_DAILY_DATA 60 /*For MA calculate*/
-
+#define BUFF_SIZE        100000
 typedef struct _DailyInfo DAILY_INFO;
 typedef struct _Date DATE;
 typedef struct _Trade_Record  TRADE_RECORD;
@@ -12,7 +15,7 @@ typedef char bool;
 
 struct _Date {
   SHORT16 Years;
-  SHORT16 Mouths;
+  SHORT16 Months;
   SHORT16 Days;
 };
 
@@ -57,7 +60,7 @@ struct _Trade_Record {
   TRADE_RECORD  *Next;
 };
 
-void InitStockDailyInfoData (char *FileName, DAILY_INFO *DailyInfoBuffer, SHORT16 days);
+void InitStockDailyInfoData (FILE *fp, DAILY_INFO *DataBuffer, SHORT16 days);
 void StockSimulator (SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead);
 void AnalysisProfit (TRADE_RECORD  *TradeRecords);
 void CalculateMA (DAILY_INFO * DailyInfo, SHORT16 days);
@@ -65,102 +68,155 @@ void CalculateRSI (DAILY_INFO * DailyInfo, SHORT16 days);
 void CalculateKD (DAILY_INFO * DailyInfo, SHORT16 days);
 void FindBuyPoint (SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, SHORT16 *BuyDayIndex ,SHORT16 *BuyPrice);
 void FindSellPoint (SHORT16 BuyDayIndex, SHORT16 EndDayIndex, SHORT16 BuyPrice, DAILY_INFO *DailyInfo, SHORT16 *SellDayIndex, SHORT16 *SellPrice);
+void StartElement (void *data, const char *element, const char **attribute);
+void EndElement   (void *data, const char *element);
+void ElementData  (void *data, const char *content, int length);
 
-void InitStockDailyInfoData(char *FileName , DAILY_INFO *DailyInfoBuffer, SHORT16 days)
+bool StockIdFlag;
+SHORT16     TheStockID;
+int         Depth;              /*Global element depth*/
+DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
+
+void StartElement (void *data, const char *Element, const char **attribute)
+{ 
+  int i;
+  const char *Value;
+
+  if ( !strcmp("Daily",Element) || !strcmp("Price",Element) || !strcmp("Difference",Element)) // Element = Daily or Price or Difference
+  {
+    for(i = 0; attribute[i]; i += 2)
+    {
+	  Value = attribute[i+1];
+	  if(!strcmp("Index",attribute[i]))
+	  {
+        InfoBuffer->DayIndex      = (SHORT16)atoi(Value);
+	  }
+	  if(!strcmp("Years",attribute[i]))
+	  {
+        InfoBuffer->Dates.Years   = (SHORT16)atoi(Value);
+	  }
+	  if(!strcmp("Months",attribute[i]))
+	  {
+        InfoBuffer->Dates.Months  = (SHORT16)atoi(Value);
+	  }
+	  if(!strcmp("Days",attribute[i]))
+	  {
+        InfoBuffer->Dates.Days    = (SHORT16)atoi(Value);
+	  }
+	
+	  if(!strcmp("Start",attribute[i]))
+	  {
+        InfoBuffer->Start         = (SHORT16)atoi(Value);
+	  }
+	  if(!strcmp("High",attribute[i]))
+	  {
+	    InfoBuffer->High          = (SHORT16)atoi(Value);
+	  }
+	  if(!strcmp("Low",attribute[i]))
+	  {
+	    InfoBuffer->Low           = (SHORT16)atoi(Value); 
+	  }
+	  if(!strcmp("End",attribute[i]))
+	  {
+	    InfoBuffer->End           = (SHORT16)atoi(Value);
+	  }	  
+
+	  if(!strcmp("DealersDiff",attribute[i]))
+	  {
+	    InfoBuffer->DealersDiff           = atoi(Value);
+	  }
+	  if(!strcmp("ForeignInvestorsDiff",attribute[i]))
+	  {
+	    InfoBuffer->ForeignInvestorsDiff  = atoi(Value);
+	  }
+	  if(!strcmp("InvestmentTrustDiff",attribute[i]))
+	  {
+	    InfoBuffer->InvestmentTrustDiff   = atoi(Value);
+	  }
+	  if(!strcmp("LeaderDiff",attribute[i]))
+	  {
+	    InfoBuffer->DealersDiff           = atoi(Value);
+	  }
+    }
+  }
+
+  if (!strcmp("StockId",Element)) // Element = StockId
+  {
+    StockIdFlag = 1;
+  }
+
+  Depth++;
+}
+void EndElement   (void *Data, const char *Element)
+{
+  if (!strcmp("Daily",Element))
+  {
+	InfoBuffer->StockID = TheStockID;
+    InfoBuffer++;    /*Move the pointer to next day*/
+  }
+  Depth--;
+}
+void ElementData  (void *Data, const char *Content, int Length)
+{
+  if(StockIdFlag)
+  {
+	TheStockID = atoi(Content);
+    StockIdFlag = 0;
+  }
+}
+
+void InitStockDailyInfoData(FILE *fp , DAILY_INFO *DataBuffer, SHORT16 days)
 {
   //
   // Catch stock data and ID from XML file, then init the data to struct.
   //
-  ezxml_t  XmlFile, StockDatax, StockIdx, Dailyx, Pricex, Differencex;
-  char     *LeaderDiff, *ForeignInvestorsDiff, *InvestmentTrustDiff, *DealersDiff;     /*Might be negative number*/
-  char     *LeaderDiff2, *ForeignInvestorsDiff2, *InvestmentTrustDiff2, *DealersDiff2; /*Postive number*/  
-  SHORT16  IndexDay,i,j; 
-  
-  InvestmentTrustDiff2                   = 0;
-  ForeignInvestorsDiff2                  = 0;
-  DealersDiff2                           = 0;
-  LeaderDiff2                            = 0;	  
-
-  XmlFile      = ezxml_parse_file (FileName);
-  StockDatax   = ezxml_child (XmlFile,"StockData");
-  StockIdx     = ezxml_child (StockDatax,"StockId"); 
-  Dailyx       = ezxml_child (StockDatax,"Daily");
+  XML_Parser   Parser;
+  void         *Buff;
+  int          FileLens;
+  DAILY_INFO   *DailyInfoHead;
   //
   // Allcate memory to buffer, the first data should 60 (depends on FIRST_DAILY_DATA) days before start day for calculate MA60 (depends on FIRST_DAILY_DATA) .
   //
-  DailyInfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA));
+  InfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA));
+  DailyInfoHead   = InfoBuffer;
+
+  Parser = XML_ParserCreate(NULL);
+  Buff     = XML_GetBuffer(Parser, BUFF_SIZE);               //Allocate buffer
+  FileLens = read(fp, Buff, BUFF_SIZE);                      //Read data to buffer
+  
+  //
+  // Set parser callback function
+  //
+  XML_SetStartElementHandler (Parser,StartElement);  /*When element start*/
+  XML_SetEndElementHandler (Parser,EndElement);      /*When element end*/
+  XML_SetCharacterDataHandler (Parser,ElementData);  /*When element data*/
+  
+  //
+  // Call parser
+  //
+  if (! XML_ParseBuffer(Parser, FileLens, FileLens == 0)) {
+    /* handle parse error */
+  }
 
   //
   // Parsing XML data and write into DailyInfoBuffer
   //
-  for(IndexDay = 0; IndexDay < days+FIRST_DAILY_DATA; IndexDay++)
-  {
-    Pricex       = ezxml_child (Dailyx,"Price");
-    Differencex  = ezxml_child (Dailyx,"Difference");
-
-    DailyInfoBuffer->StockID               = (SHORT16)(StockIdx->txt);
-    DailyInfoBuffer->DayIndex              = atoi(ezxml_attr(Dailyx,"Index"));
-    DailyInfoBuffer->Dates.Years           = atoi(ezxml_attr(Dailyx,"Years"));
-    DailyInfoBuffer->Dates.Mouths          = atoi(ezxml_attr(Dailyx,"Mouths"));
-    DailyInfoBuffer->Dates.Days            = atoi(ezxml_attr(Dailyx,"Days"));
-    DailyInfoBuffer->Start                 = atoi(ezxml_attr(Pricex, "Start"));
-    DailyInfoBuffer->End                   = atoi(ezxml_attr(Pricex, "End"));
-    DailyInfoBuffer->High                  = atoi(ezxml_attr(Pricex, "High"));
-    DailyInfoBuffer->Low                   = atoi(ezxml_attr(Pricex, "Low"));
-	InvestmentTrustDiff                    = 0;
-	ForeignInvestorsDiff                   = 0;
-	DealersDiff                            = 0;
-	LeaderDiff                             = 0;
-	
-    //
-    // Check if it's a negative number
-    //
-    if(strstr(LeaderDiff,"-")){
-      for(i=strlen(LeaderDiff)-1,j=0;i>=0;i--){
-          LeaderDiff2[j]=LeaderDiff[i];
-          j++;
-      }
-    }
-    if(strstr(ForeignInvestorsDiff,"-")){
-      for(i=strlen(ForeignInvestorsDiff)-1,j=0;i>=0;i--){
-          ForeignInvestorsDiff2[j]=ForeignInvestorsDiff[i];
-          j++;
-      }
-    }
-    if(strstr(InvestmentTrustDiff,"-")){
-      for(i=strlen(InvestmentTrustDiff)-1,j=0;i>=0;i--){
-          InvestmentTrustDiff2[j]=InvestmentTrustDiff[i];
-          j++;
-      }
-    }
-    if(strstr(DealersDiff,"-")){
-      for(i=strlen(DealersDiff)-1,j=0;i>=0;i--){
-          DealersDiff2[j]=DealersDiff[i];
-          j++;
-      }
-    }
-
-    DailyInfoBuffer->LeaderDiff            = strstr(LeaderDiff,"-") ?   -atoi(LeaderDiff2): atoi(LeaderDiff);
-    DailyInfoBuffer->ForeignInvestorsDiff  = strstr(ForeignInvestorsDiff,"-") ? -atoi(ForeignInvestorsDiff2) : atoi(ForeignInvestorsDiff);
-    DailyInfoBuffer->InvestmentTrustDiff   = strstr(InvestmentTrustDiff,"-") ? -atoi(InvestmentTrustDiff2) : atoi(InvestmentTrustDiff);
-    DailyInfoBuffer->DealersDiff           = strstr(DealersDiff,"-") ? -atoi(DealersDiff2) : atoi(DealersDiff);
-
-    Dailyx = Dailyx->next;
-  }
 
   //
   // Calculate MA5 MA10 MA20 MA60 write into DailyInfoBuffer
   //
-  CalculateMA (DailyInfoBuffer, days);
+  CalculateMA (DailyInfoHead, days);
 
   //
   // Calculate KD and RSI write into DailyInfoBuffer
   //
-  CalculateRSI (DailyInfoBuffer, days);
+  CalculateRSI (DailyInfoHead, days);
 
-  CalculateKD (DailyInfoBuffer, days);
+  CalculateKD (DailyInfoHead, days);
 
-  ezxml_free (XmlFile);
+  XML_ParserFree(Parser);
+  
+  DataBuffer = DailyInfoHead;
 }
 
 void StockSimulator(SHORT16 StartDayIndex, SHORT16 EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead)
@@ -474,13 +530,14 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords)
    }
 }
 
-int Main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   DAILY_INFO    *StockDailyData;
   SHORT16       DayIntervals;    //Tatol days for emulator
   SHORT16       StartDayIndex;
   SHORT16       EndDayIndex;
   TRADE_RECORD  *ReturnRecords;
+  FILE          *fp;  
 
   StockDailyData = NULL;
   // 
@@ -489,17 +546,23 @@ int Main(int argc, char **argv)
   //
   DayIntervals = (SHORT16)argv[1];
 
+  fp = fopen(argv[0],"r");
+  if (fp == NULL) {
+	printf("open file error!!\n");
+	return 0;  
+  }
+
   //
   // Init the stock data struct
   //
-  InitStockDailyInfoData (argv[0], StockDailyData, DayIntervals);
+  InitStockDailyInfoData (fp, StockDailyData, DayIntervals);
 
   //
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
   ReturnRecords = NULL;
   StartDayIndex = FIRST_DAILY_DATA;  /*Start from 60 days*/
-  EndDayIndex = StartDayIndex + DayIntervals;
+  EndDayIndex   = StartDayIndex + DayIntervals;
   StockSimulator (StartDayIndex, EndDayIndex, StockDailyData, ReturnRecords);
 
   //
