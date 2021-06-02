@@ -562,7 +562,7 @@ int main(int argc, char **argv)
   //
   ReturnRecords = NULL;
   StartDayIndex = FIRST_DAILY_DATA;  /*Start from 60 days*/
-  EndDayIndex   = StartDayIndex + DayIntervals;
+  EndDayIndex = StartDayIndex + DayIntervals;
   StockSimulator (StartDayIndex, EndDayIndex, StockDailyData, ReturnRecords);
 
   //
