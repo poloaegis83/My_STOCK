@@ -180,17 +180,19 @@ void InitStockDailyInfoData(FILE *fp , DAILY_INFO *DataBuffer, SHORT16 days)
   InfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA));
   DailyInfoHead   = InfoBuffer;
 
-  Parser = XML_ParserCreate(NULL);
+  Parser   = XML_ParserCreate(NULL);
+
   Buff     = XML_GetBuffer(Parser, BUFF_SIZE);               //Allocate buffer
-  FileLens = read(fp, Buff, BUFF_SIZE);                      //Read data to buffer
-  
+
+  FileLens = fread( Buff, sizeof(char), BUFF_SIZE, fp);      //Read data to buffer
+
   //
   // Set parser callback function
   //
   XML_SetStartElementHandler (Parser,StartElement);  /*When element start*/
   XML_SetEndElementHandler (Parser,EndElement);      /*When element end*/
   XML_SetCharacterDataHandler (Parser,ElementData);  /*When element data*/
-  
+
   //
   // Call parser
   //
@@ -215,7 +217,7 @@ void InitStockDailyInfoData(FILE *fp , DAILY_INFO *DataBuffer, SHORT16 days)
   CalculateKD (DailyInfoHead, days);
 
   XML_ParserFree(Parser);
-  
+
   DataBuffer = DailyInfoHead;
 }
 
@@ -302,29 +304,30 @@ void CalculateMA(DAILY_INFO *DailyInfo, SHORT16 days)
   Price20      = 0;
   Price60      = 0;
   Price120     = 0;
-  
+
   DailyInfoPtr = DailyInfo + FIRST_DAILY_DATA;
 
   for(DailyIndex = 0; DailyIndex < days; DailyIndex++)
   {    
+
     for(MAIndex = 0; MAIndex < 5; MAIndex ++) {
-      Price5 += (DailyInfo-MAIndex)->End;
+      Price5 += (DailyInfoPtr-MAIndex)->End;
     }
 
     for(MAIndex = 0; MAIndex < 10; MAIndex ++) {
-      Price10 += (DailyInfo-MAIndex)->End;
+      Price10 += (DailyInfoPtr-MAIndex)->End;
     }
 
     for(MAIndex = 0; MAIndex < 20; MAIndex ++) {
-      Price20 += (DailyInfo-MAIndex)->End;
+      Price20 += (DailyInfoPtr-MAIndex)->End;
     }
 
     for(MAIndex = 0; MAIndex < 60; MAIndex ++) {
-      Price60 += (DailyInfo-MAIndex)->End;
+      Price60 += (DailyInfoPtr-MAIndex)->End;
     }
 
     for(MAIndex = 0; MAIndex < 120; MAIndex ++) {
-      Price120 += (DailyInfo-MAIndex)->End;
+      Price120 += (DailyInfoPtr-MAIndex)->End;
     }
 
     if(FIRST_DAILY_DATA >= 5){
@@ -342,8 +345,10 @@ void CalculateMA(DAILY_INFO *DailyInfo, SHORT16 days)
     if(FIRST_DAILY_DATA >= 120){
       DailyInfoPtr->MA120  = Price120/120;
     }
+
     DailyInfoPtr++;
   }
+
 }
 
 void CalculateRSI(DAILY_INFO * DailyInfo, SHORT16 days)
@@ -549,7 +554,7 @@ int main(int argc, char **argv)
   fp = fopen(argv[0],"r");
   if (fp == NULL) {
 	printf("open file error!!\n");
-	return 0;  
+	return 1;  
   }
 
   //
