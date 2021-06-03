@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MA5_OVER_MA10 103
+#define MA5_OVER_MA10 101
 #define STOP_LOSS_LIMIT 15
 #define FIRST_DAILY_DATA 20 /*For MA calculate*/
 #define BUFF_SIZE        100000
@@ -591,7 +591,7 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords)
      printf("===============================================\n");    	 
    } while(TradeRecords != NULL);
 
-  printf("\nTotal = %d\n",EarnedMoney + LoseMoney);
+  printf("\nTotal = %d\n",EarnedMoney - LoseMoney);
   printf("===============================================\n");    
   DEBUG("AnalysisProfit End\n");    
 }
