@@ -2,8 +2,19 @@ import requests
 import xml.etree.cElementTree as ET
 import lxml.etree as etree
 from   bs4      import BeautifulSoup
+import time
+import random
 
-headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
+#headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
+
+user_agent_list = ["Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36",
+                    "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36",
+                    "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36",
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36",
+                    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36",
+                    "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)",
+                    "Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10.5; en-US; rv:1.9.2.15) Gecko/20110303 Firefox/3.6.15",
+                   ]
 
 StockData = ET.Element('StockData',Version="1.0") # global Stock data
 
@@ -18,6 +29,10 @@ def Get_Data(stock_id,year,month,IsTWSE):
 
     url2 = "https://stock.wearn.com/netbuy.asp?Year="+yeart+"&month="+month+"&kind="+stock_id  # 三大法人
     url3 = "https://stock.wearn.com/zhuli.asp?Year="+yeart+"&month="+month+"&kind="+stock_id   # 主力進出
+
+    headers={
+    "User-Agent":random.choice(user_agent_list)
+    }
 
     res = requests.get(url1, headers = headers)
     res.encoding = 'cp950'
@@ -64,7 +79,7 @@ def Get_Data(stock_id,year,month,IsTWSE):
     except AttributeError: 
         Get_Data.count = length + 1    # 建立函式的屬性(static variable)
 
-    count1 = Get_Data.count - length   # For daily index 屬性每次執行function累加     
+    count1 = Get_Data.count - length   # For daily index 屬性累加     
 
     global StockData
 
@@ -105,6 +120,11 @@ def Get_Data(stock_id,year,month,IsTWSE):
 
 def Is_TWSE_Listed(stock_id):
     url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=html&date=20200101&stockNo="+stock_id # Test 上市或上櫃
+    #global user_agent_list
+    #headers['User-Agent'] = random.choice(user_agent_list)
+    headers={
+    "User-Agent":random.choice(user_agent_list)
+    }
     res = requests.get(url, headers = headers)
     res.encoding = 'cp950'
     Soup = BeautifulSoup (res.text, "html.parser")
@@ -147,6 +167,7 @@ if YearDiff == 0:
         YearData  = str(YearStart)
         MonthData = str(MonthStart+monthI).rjust(2,'0')
         print('Y/M',YearData,MonthData)
+        time.sleep(2)
         Get_Data(stock_id, YearData, MonthData, IsTWSE)        
 elif YearDiff > 0:
     MonthDiff = ((12 - MonthStart) + MonthEnd) + (YearDiff-1)*12
@@ -158,6 +179,7 @@ elif YearDiff > 0:
             MonthData = '12'
             yearI += 1
         print('Y/M',YearData,MonthData)
+        time.sleep(2)
         Get_Data(stock_id, YearData, MonthData, IsTWSE)
 else:
     BaseException: Error
@@ -184,3 +206,5 @@ print(etree.tostring(root, pretty_print=True, encoding="unicode"))
 root.write("test.xml", encoding="utf-8")
 
 #ET.dump(StockData)
+
+#os.remove('test.xml')
