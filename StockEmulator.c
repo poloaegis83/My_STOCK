@@ -15,7 +15,6 @@
 typedef struct _DailyInfo DAILY_INFO;
 typedef struct _Date DATE;
 typedef struct _Trade_Record  TRADE_RECORD;
-typedef char bool;
 
 struct _Date {
   int Years;
@@ -47,7 +46,7 @@ struct _DailyInfo {
    char    KD_K_Value;
    char    KD_D_Value;   
 
-   int DayIndex;
+   int     DayIndex;
    DATE    Dates;
 };
 
@@ -64,24 +63,26 @@ struct _Trade_Record {
   TRADE_RECORD  *Next;
 };
 
-char DebugFlag = 1;
+char DebugFlag = 0;
 
-void InitStockDailyInfoData (FILE *fp, DAILY_INFO *DataBuffer, int days);
-void StockSimulator (int StartDayIndex, int EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead);
+void InitStockDailyInfoData (FILE *fp, int days);
+void StockSimulator (int StartDayIndex, int EndDayIndex, TRADE_RECORD **ReturnRecordsHead);
 void AnalysisProfit (TRADE_RECORD  *TradeRecords);
-void CalculateMA (DAILY_INFO * DailyInfo, int days);
-void CalculateRSI (DAILY_INFO * DailyInfo, int days);
-void CalculateKD (DAILY_INFO * DailyInfo, int days);
-void FindBuyPoint (int StartDayIndex, int EndDayIndex, DAILY_INFO* DailyInfo, int *BuyDayIndex ,int *BuyPrice);
-void FindSellPoint (int BuyDayIndex, int EndDayIndex, int BuyPrice, DAILY_INFO *DailyInfo, int *SellDayIndex, int *SellPrice);
+void CalculateMA (int days);
+void CalculateRSI (int days);
+void CalculateKD (int days);
+void FindBuyPoint (int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *BuyPrice);
+void FindSellPoint (int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayIndex, int *SellPrice);
 void StartElement (void *data, const char *element, const char **attribute);
 void EndElement   (void *data, const char *element);
 void ElementData  (void *data, const char *content, int length);
 
-bool StockIdFlag;
-int     TheStockID;
+char        StockIdFlag;
+int         TheStockID;
 int         Depth;              /*Global element depth*/
 DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
+DAILY_INFO  *BuffInitPtr;
+XML_Parser   Parser;
 
 void StartElement (void *data, const char *Element, const char **attribute)
 { 
@@ -95,53 +96,53 @@ void StartElement (void *data, const char *Element, const char **attribute)
 	  Value = attribute[i+1];
 	  if(!strcmp("Index",attribute[i]))
 	  {
-        InfoBuffer->DayIndex      = (int)atoi(Value);
+        BuffInitPtr->DayIndex      = (int)atoi(Value);
 	  }
 	  if(!strcmp("Years",attribute[i]))
 	  {
-        InfoBuffer->Dates.Years   = (int)atoi(Value);
+        BuffInitPtr->Dates.Years   = (int)atoi(Value);
 	  }
 	  if(!strcmp("Months",attribute[i]))
 	  {
-        InfoBuffer->Dates.Months  = (int)atoi(Value);
+        BuffInitPtr->Dates.Months  = (int)atoi(Value);
 	  }
 	  if(!strcmp("Days",attribute[i]))
 	  {
-        InfoBuffer->Dates.Days    = (int)atoi(Value);
+        BuffInitPtr->Dates.Days    = (int)atoi(Value);
 	  }
 	
 	  if(!strcmp("Start",attribute[i]))
 	  {
-        InfoBuffer->Start         = (int)atoi(Value);
+        BuffInitPtr->Start         = (int)atoi(Value);
 	  }
 	  if(!strcmp("High",attribute[i]))
 	  {
-	    InfoBuffer->High          = (int)atoi(Value);
+	    BuffInitPtr->High          = (int)atoi(Value);
 	  }
 	  if(!strcmp("Low",attribute[i]))
 	  {
-	    InfoBuffer->Low           = (int)atoi(Value); 
+	    BuffInitPtr->Low           = (int)atoi(Value); 
 	  }
 	  if(!strcmp("End",attribute[i]))
 	  {
-	    InfoBuffer->End           = (int)atoi(Value);
+	    BuffInitPtr->End           = (int)atoi(Value);
 	  }	  
 
 	  if(!strcmp("DealersDiff",attribute[i]))
 	  {
-	    InfoBuffer->DealersDiff           = atoi(Value);
+	    BuffInitPtr->DealersDiff           = atoi(Value);
 	  }
 	  if(!strcmp("ForeignInvestorsDiff",attribute[i]))
 	  {
-	    InfoBuffer->ForeignInvestorsDiff  = atoi(Value);
+	    BuffInitPtr->ForeignInvestorsDiff  = atoi(Value);
 	  }
 	  if(!strcmp("InvestmentTrustDiff",attribute[i]))
 	  {
-	    InfoBuffer->InvestmentTrustDiff   = atoi(Value);
+	    BuffInitPtr->InvestmentTrustDiff   = atoi(Value);
 	  }
 	  if(!strcmp("LeaderDiff",attribute[i]))
 	  {
-	    InfoBuffer->LeaderDiff            = atoi(Value);
+	    BuffInitPtr->LeaderDiff            = atoi(Value);
 	  }
     }
   }
@@ -157,8 +158,8 @@ void EndElement   (void *Data, const char *Element)
 {
   if (!strcmp("Daily",Element))
   {
-	InfoBuffer->StockID = TheStockID;
-    InfoBuffer++;    /*Move the pointer to next day*/
+	BuffInitPtr->StockID = TheStockID;
+    BuffInitPtr++;    /*Move the pointer to next day*/
   }
   Depth--;
 }
@@ -171,22 +172,50 @@ void ElementData  (void *Data, const char *Content, int Length)
   }
 }
 
-void InitStockDailyInfoData(FILE *fp , DAILY_INFO *DataBuffer, int days)
+void PrintInfo()
+{
+  DAILY_INFO  *Daily;
+  int         DailyIndex;
+  
+  Daily = InfoBuffer;
+  
+  for(DailyIndex = 0; DailyIndex < 70; DailyIndex++)
+  {    
+    printf("DailyInfoPtr->StockID  = %d\n",Daily->StockID);
+    printf("DailyInfoPtr->DayIndex = %d\n",Daily->DayIndex);
+    printf("DailyInfoPtr->Start    = %d\n",Daily->Start);
+    printf("DailyInfoPtr->High     = %d\n",Daily->High);
+    printf("DailyInfoPtr->Low      = %d\n",Daily->Low);  
+    printf("DailyInfoPtr->End      = %d\n",Daily->End);
+    printf("DailyInfoPtr->LeaderDiff              = %d\n",Daily->LeaderDiff);
+    printf("DailyInfoPtr->ForeignInvestorsDiff    = %d\n",Daily->ForeignInvestorsDiff);
+    printf("DailyInfoPtr->InvestmentTrustDiff     = %d\n",Daily->InvestmentTrustDiff);  
+    printf("DailyInfoPtr->DealersDiff       = %d\n",Daily->DealersDiff);
+    printf("DailyInfoPtr->Dates.Years       = %d\n",Daily->Dates.Years);
+    printf("DailyInfoPtr->Dates.Months      = %d\n",Daily->Dates.Months);
+    printf("DailyInfoPtr->Dates.Days        = %d\n",Daily->Dates.Days);
+    printf("DailyInfoPtr->MA5        = %d\n",Daily->MA5);
+    printf("DailyInfoPtr->MA10       = %d\n",Daily->MA10);
+    printf("DailyInfoPtr->MA20       = %d\n",Daily->MA20);
+    printf("DailyInfoPtr->MA60       = %d\n===================\n",Daily->MA60);	
+	Daily += 1;
+  }
+}
+
+void InitStockDailyInfoData(FILE *fp , int days)
 {
   //
   // Catch stock data and ID from XML file, then init the data to struct.
   //
-  XML_Parser   Parser;
   void         *Buff;
   int          FileLens;
-  DAILY_INFO   *DailyInfoHead;
   
   DEBUG("InitStockDailyInfoData Start\n");  
   //
   // Allcate memory to buffer, the first data should 60 (depends on FIRST_DAILY_DATA) days before start day for calculate MA60 (depends on FIRST_DAILY_DATA) .
   //
   InfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA));
-  DailyInfoHead   = InfoBuffer;
+  BuffInitPtr = InfoBuffer;
 
   Parser   = XML_ParserCreate(NULL);
 
@@ -215,22 +244,19 @@ void InitStockDailyInfoData(FILE *fp , DAILY_INFO *DataBuffer, int days)
   //
   // Calculate MA5 MA10 MA20 MA60 write into DailyInfoBuffer
   //
-  CalculateMA (DailyInfoHead, days);
+  CalculateMA (days);
 
   //
   // Calculate KD and RSI write into DailyInfoBuffer
   //
-  CalculateRSI (DailyInfoHead, days);
+  CalculateRSI (days);
 
-  CalculateKD (DailyInfoHead, days);
-
-  XML_ParserFree(Parser);
-
-  DataBuffer = DailyInfoHead;
+  CalculateKD (days);
+  
   DEBUG("InitStockDailyInfoData End\n");   
 }
 
-void StockSimulator(int StartDayIndex, int EndDayIndex, DAILY_INFO* DailyInfo, TRADE_RECORD  *ReturnRecordsHead)
+void StockSimulator(int StartDayIndex, int EndDayIndex, TRADE_RECORD  **ReturnRecordsHead)
 {
   int       StartDayIndex1;
   int       BuyDayIndex;
@@ -238,7 +264,6 @@ void StockSimulator(int StartDayIndex, int EndDayIndex, DAILY_INFO* DailyInfo, T
   int       SellDayIndex;
   int       SellPrice;
   int       Count;
-
   TRADE_RECORD  *OldRecords;
   TRADE_RECORD  *NewRecords; 
 
@@ -248,21 +273,27 @@ void StockSimulator(int StartDayIndex, int EndDayIndex, DAILY_INFO* DailyInfo, T
   OldRecords = NULL;
   NewRecords = NULL;
   SellDayIndex = 0;
+  SellPrice    = 0;
   StartDayIndex1 = StartDayIndex;
 
   while(SellDayIndex+2 < EndDayIndex) {  //Need at least 2 days left, for buypoint and sellpoint check.
-
     //
     // Time order: StartDayIndex-->BuyDayIndex-->SellDayIndex-->EndDayIndex
     //             [---------------FindBuyPoint---------------------------]
     //                            [-------------FindSellPoint-------------]        
     //
-    FindBuyPoint(StartDayIndex1, EndDayIndex, DailyInfo, &BuyDayIndex, &BuyPrice);
+    FindBuyPoint(StartDayIndex1, EndDayIndex, &BuyDayIndex, &BuyPrice);
 
-    if (BuyDayIndex != 0 && BuyPrice != 0)
+    if((BuyDayIndex != 0 && BuyPrice != 0))
+	{
+      FindSellPoint(BuyDayIndex+1, EndDayIndex, BuyPrice, &SellDayIndex, &SellPrice); /*if buy, move to next day to find sell*/
+	}
+
+    if ( (BuyDayIndex == 0 && BuyPrice == 0) || (SellDayIndex == 0 && SellPrice == 0) ) /*no sell or buy info ==> finish*/
     {
-      FindSellPoint(BuyDayIndex, EndDayIndex, BuyPrice, DailyInfo, &SellDayIndex, &SellPrice);           
+      break;
     }
+
     //
     // Record trade events
     //
@@ -275,111 +306,91 @@ void StockSimulator(int StartDayIndex, int EndDayIndex, DAILY_INFO* DailyInfo, T
     NewRecords->Next         = 0;
 
     if(Count == 0) {
-      ReturnRecordsHead = NewRecords;
-    } else {
+      *ReturnRecordsHead = NewRecords;
+    } else {	
       OldRecords->Next = NewRecords;
     }
       OldRecords = NewRecords;
-
     //
     // Next time StartDayIndex equals SellDayIndex at this times
     //
     StartDayIndex1 = SellDayIndex;
-    Count++;
-
-    if ( (BuyDayIndex != 0 && BuyPrice != 0) || (SellDayIndex != 0 && SellPrice != 0) ) /*no buy or sell info*/
-    {
-      break;
-    }
+    Count += 1;
   }
-  
+
   DEBUG("StockSimulator End\n");  
 }
 
-void CalculateMA(DAILY_INFO *DailyInfo, int days)
+void CalculateMA(int days)
 {
   //
   // Calculate MA data write into DAILY_INFO.
   //
-  int       Price5;
-  int       Price10;
-  int       Price20;
-  int       Price60;
-  int       Price120;   
-  int       MAIndex;
-  int       DailyIndex;
-  DAILY_INFO    *DailyInfoPtr;
+  int         Price5;
+  int         Price10;
+  int         Price20;
+  int         Price60;
+  int         Price120;   
+  int         MAIndex;
+  int         DailyIndex;
+  DAILY_INFO  *Daily;
   
   DEBUG("CalculateMA Start\n");    
   //
   // Todo: Need add error handle here
   //
-  Price5       = 0;
-  Price10      = 0;
-  Price20      = 0;
-  Price60      = 0;
-  Price120     = 0;
 
-  DailyInfoPtr = DailyInfo + FIRST_DAILY_DATA;
+  Daily = InfoBuffer + FIRST_DAILY_DATA;
 
   for(DailyIndex = 0; DailyIndex < days; DailyIndex++)
-  {    
+  {
+    Price5       = 0;
+    Price10      = 0;
+    Price20      = 0;
+    Price60      = 0;
+    Price120     = 0;
+
     for(MAIndex = 0; MAIndex < 5; MAIndex ++) {
-      Price5 += (DailyInfoPtr-MAIndex)->End;
+      Price5 += (Daily-MAIndex)->End;
     }
 
     for(MAIndex = 0; MAIndex < 10; MAIndex ++) {
-      Price10 += (DailyInfoPtr-MAIndex)->End;
+      Price10 += (Daily-MAIndex)->End;
     }
 
     for(MAIndex = 0; MAIndex < 20; MAIndex ++) {
-      Price20 += (DailyInfoPtr-MAIndex)->End;
+      Price20 += (Daily-MAIndex)->End;
     }
 
     for(MAIndex = 0; MAIndex < 60; MAIndex ++) {
-      Price60 += (DailyInfoPtr-MAIndex)->End;
+      Price60 += (Daily-MAIndex)->End;
     }
 
     for(MAIndex = 0; MAIndex < 120; MAIndex ++) {
-      Price120 += (DailyInfoPtr-MAIndex)->End;
+      Price120 += (Daily-MAIndex)->End;
     }
 
     if(FIRST_DAILY_DATA >= 5){
-      DailyInfoPtr->MA5    = Price5/5;
+      Daily->MA5    = Price5/5;
     }
     if(FIRST_DAILY_DATA >= 10){
-      DailyInfoPtr->MA10   = Price10/10;
+      Daily->MA10   = Price10/10;
     }
     if(FIRST_DAILY_DATA >= 20){
-      DailyInfoPtr->MA20   = Price20/20;
+      Daily->MA20   = Price20/20;
     }
     if(FIRST_DAILY_DATA >= 60){
-      DailyInfoPtr->MA60   = Price60/60;
+      Daily->MA60   = Price60/60;
     }
     if(FIRST_DAILY_DATA >= 120){
-      DailyInfoPtr->MA120  = Price120/120;
+      Daily->MA120  = Price120/120;
     }
-/*
-  printf("DailyInfoPtr->StockID  = %d\n",DailyInfoPtr->StockID);
-  printf("DailyInfoPtr->DayIndex = %d\n",DailyInfoPtr->DayIndex);
-  printf("DailyInfoPtr->Start    = %d\n",DailyInfoPtr->Start);
-  printf("DailyInfoPtr->High    = %d\n",DailyInfoPtr->High);
-  printf("DailyInfoPtr->Low      = %d\n",DailyInfoPtr->Low);  
-  printf("DailyInfoPtr->End      = %d\n",DailyInfoPtr->End);
-  printf("DailyInfoPtr->LeaderDiff    = %d\n",DailyInfoPtr->LeaderDiff);
-  printf("DailyInfoPtr->ForeignInvestorsDiff    = %d\n",DailyInfoPtr->ForeignInvestorsDiff);
-  printf("DailyInfoPtr->InvestmentTrustDiff   = %d\n",DailyInfoPtr->InvestmentTrustDiff);  
-  printf("DailyInfoPtr->DealersDiff      = %d\n",DailyInfoPtr->DealersDiff);
-  printf("DailyInfoPtr->Dates.Years       = %d\n",DailyInfoPtr->Dates.Years);
-  printf("DailyInfoPtr->Dates.Months       = %d\n",DailyInfoPtr->Dates.Months);
-  printf("DailyInfoPtr->Dates.Days       = %d\n===================\n",DailyInfoPtr->Dates.Days);    
-*/
-    DailyInfoPtr++;
+    Daily += 1;
   }
   DEBUG("CalculateMA End\n");  
 }
 
-void CalculateRSI(DAILY_INFO * DailyInfo, int days)
+void CalculateRSI(int days)
 {
   //
   // Calculate RSI data write into DAILY_INFO.
@@ -387,7 +398,7 @@ void CalculateRSI(DAILY_INFO * DailyInfo, int days)
 
 }
 
-void CalculateKD(DAILY_INFO * DailyInfo, int days)
+void CalculateKD(int days)
 {
   //
   // Calculate KD data write into DAILY_INFO.
@@ -395,30 +406,30 @@ void CalculateKD(DAILY_INFO * DailyInfo, int days)
 
 }
 
-void FindBuyPoint(int StartDayIndex, int EndDayIndex, DAILY_INFO* DailyInfo, int *BuyDayIndex ,int *BuyPrice)
+void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *BuyPrice)
 {
   //
   // Find buying point
   //
-  int    CurrentIndex;
+  int        CurrentIndex;
+  DAILY_INFO *Daily;     
   DAILY_INFO *LastDay;
   DAILY_INFO *Last2Day;
-  int    NewPrice;
-  bool       MA_check  = 0;
-  bool       LD_check  = 0;
-  bool       RSI_check = 0;
-  bool       KD_check  = 0;
+  int        NewPrice;
+  char       MA_check  = 0;
+  char       LD_check  = 0;
+  char       RSI_check = 0;
+  char       KD_check  = 0;
 
-  DEBUG("FindBuyPoint Start\n");
+  Daily = InfoBuffer + StartDayIndex-1; 
 
-  DailyInfo += StartDayIndex; 
-  
   for(CurrentIndex = StartDayIndex; CurrentIndex < EndDayIndex; CurrentIndex++)
   {
-    LastDay = DailyInfo--;
-    Last2Day = LastDay--;
-    NewPrice = DailyInfo->Start;
-    
+    LastDay =  Daily-1;
+    Last2Day = LastDay-1;
+    NewPrice = Daily->Start;
+    //printf("SearchBuy- NewDay(%d),LastDay(%d),LD2(%d) = %d,%d,%d\n",Daily->DayIndex,LastDay->DayIndex,Last2Day->DayIndex, NewPrice, LastDay->Start, Last2Day->Start);
+
     //
     // Check MA
     //
@@ -446,52 +457,56 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, DAILY_INFO* DailyInfo, int
     //
     // Return day index and Price
     //
-    if(MA_check && LD_check)
+    //if(MA_check && LD_check)
+	if(MA_check)
     {
-      *BuyDayIndex = StartDayIndex + CurrentIndex;
+      *BuyDayIndex = CurrentIndex;
       *BuyPrice    = NewPrice;
-      break;
+	  DEBUG("FindBuyPoint Find\n"); 
+      DEBUG("FindBuyPoint End\n");  
+      return;
     }
-    else
-    {
-       //
-       // No buy point
-       //
-       *BuyDayIndex = 0;
-       *BuyPrice    = 0;
-    }
+    Daily += 1;
   }
   
+  //
+  // No buy point
+  //
+  *BuyDayIndex = 0;
+  *BuyPrice    = 0;
+
+  DEBUG("FindBuyPoint Not Find\n"); 
   DEBUG("FindBuyPoint End\n");  
 }
 
-void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, DAILY_INFO *DailyInfo, int *SellDayIndex, int *SellPrice)
+void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayIndex, int *SellPrice)
 {
   //
   // Find Selling point
   //
-  int    NewPrice;
-  int    CurrentIndex;  
+  int        NewPrice;
+  int        CurrentIndex;
+  DAILY_INFO *Daily;   
   DAILY_INFO *LastDay;
   DAILY_INFO *Last2Day;  
-  bool       ConditionCheck = 0;
-  bool       RSI_check      = 0;
-  bool       KD_check       = 0;
+  char       ConditionCheck = 0;
+  char       RSI_check      = 0;
+  char       KD_check       = 0;
 
   DEBUG("FindSellPoint Start\n"); 
 
-  NewPrice = DailyInfo->Start;
+  Daily = InfoBuffer+BuyDayIndex;
 
   for (CurrentIndex = BuyDayIndex; CurrentIndex < EndDayIndex; CurrentIndex++)
   {
-    LastDay = DailyInfo--;
-    Last2Day = LastDay--;
-    NewPrice = DailyInfo->Start;
-
+    LastDay = Daily-1;
+    Last2Day = LastDay-1;
+    NewPrice = Daily->Start;
+    //printf("SearchSell- NewDay(%d),LastDay(%d),LD2(%d) = %d,%d,%d\n",Daily->DayIndex,LastDay->DayIndex,Last2Day->DayIndex, NewPrice, LastDay->Start, Last2Day->Start);
     //
     // Check for stop loss order
     //
-    if((BuyPrice - NewPrice)/BuyPrice > STOP_LOSS_LIMIT) // if loss more than 15% 
+    if ( (NewPrice < BuyPrice) && ((BuyPrice - NewPrice)/BuyPrice > STOP_LOSS_LIMIT) )// if loss more than 15% 
     {
       ConditionCheck = 1;
       break;
@@ -504,11 +519,11 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, DAILY_INFO *D
     //  
     if (LastDay->LeaderDiff < 0 && Last2Day->LeaderDiff < 0) {
       if(NewPrice < LastDay->MA20) {
-        ConditionCheck = 1;
+        ConditionCheck = 1;	
       }  
     } else if (LastDay->LeaderDiff < 0) {
       if(NewPrice < LastDay->MA10) {
-        ConditionCheck = 1;
+        ConditionCheck = 1;		
       }
     } else if(LastDay->LeaderDiff >= 0) {
       if(NewPrice < LastDay->MA5) {
@@ -526,17 +541,21 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, DAILY_INFO *D
     //
     if(ConditionCheck)
     {
-      *SellDayIndex = BuyDayIndex + CurrentIndex;
+      *SellDayIndex = CurrentIndex;
       *SellPrice    = NewPrice;
-      break;
-    } else {
-       //
-       // No sell point
-       //
-       *SellDayIndex = 0;
-       *SellPrice    = 0;
+	  DEBUG("FindSellPoint Find\n"); 
+      DEBUG("FindSellPoint End\n");  	  
+      return;
     }
+	
+    Daily += 1;
   }
+  //
+  // No sell point
+  //
+  *SellDayIndex = 0;
+  *SellPrice    = 0;
+  DEBUG("SellPoint Not Find\n"); 	     
   DEBUG("FindSellPoint End\n");   
 }
 
@@ -551,43 +570,45 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords)
    LoseMoney   = 0;
    Count       = 0;
 
-   while(TradeRecords->Next != NULL) 
-   {
-     printf("TradeRecords count %d \n", Count);
+  printf("===============================================\n");   
+   do{
+       printf("\nTradeRecords count %d\n", Count);
 
-     if((TradeRecords->BuyPrice != 0 || TradeRecords->BuyDayIndex != 0) && (TradeRecords->SellPrice != 0 || TradeRecords->SellDayIndex != 0)) /*if buy point and sell point exist*/ 
-     {
-       printf("Buy: DayIndex:%d, price:%d |||||| Sell: DayIndex:%d, price:%d\n", TradeRecords->BuyDayIndex, TradeRecords->BuyPrice, TradeRecords->SellDayIndex, TradeRecords->SellPrice);                         
-       if(TradeRecords->BuyPrice >= TradeRecords->SellPrice)
+       if((TradeRecords->BuyPrice != 0 || TradeRecords->BuyDayIndex != 0) && (TradeRecords->SellPrice != 0 || TradeRecords->SellDayIndex != 0)) /*if buy point and sell point exist*/ 
        {
-         EarnedMoney += (TradeRecords->SellPrice - TradeRecords->BuyPrice);
-         printf("EarnedMoney = %d\n",TradeRecords->SellPrice - TradeRecords->BuyPrice);
-       } else {
-         LoseMoney += (TradeRecords->BuyPrice - TradeRecords->SellPrice);
-         printf("LoseMoney = %d\n",TradeRecords->BuyPrice - TradeRecords->SellPrice);         
+         printf("Buy: DayIndex:%d, price:%d |||||| Sell: DayIndex:%d, price:%d\n", TradeRecords->BuyDayIndex, TradeRecords->BuyPrice, TradeRecords->SellDayIndex, TradeRecords->SellPrice);                         
+         if(TradeRecords->BuyPrice <= TradeRecords->SellPrice)
+         {
+           EarnedMoney += (TradeRecords->SellPrice - TradeRecords->BuyPrice);
+           printf("EarnedMoney = %d\n", TradeRecords->SellPrice - TradeRecords->BuyPrice);
+         } else {
+           LoseMoney += (TradeRecords->BuyPrice - TradeRecords->SellPrice);
+           printf("LoseMoney = %d\n",TradeRecords->BuyPrice - TradeRecords->SellPrice);         
+         }
+         Count++;
        }
-       Count++;
-     }
-   }
+	 TradeRecords = TradeRecords->Next;
+     printf("===============================================\n");    	 
+   } while(TradeRecords != NULL);
+
+  printf("\nTotal = %d\n",EarnedMoney + LoseMoney);
+  printf("===============================================\n");    
   DEBUG("AnalysisProfit End\n");    
 }
 
 int main(int argc, char **argv)
 {
-  DAILY_INFO    *StockDailyData;
-  int       DayIntervals;    //Tatol days for emulator
-  int       StartDayIndex;
-  int       EndDayIndex;
+  int           DayIntervals;    //Tatol days for emulator
+  int           StartDayIndex;
+  int           EndDayIndex;
   TRADE_RECORD  *ReturnRecords;
   FILE          *fp;  
 
-  StockDailyData = NULL;
   // 
   // Argument format:
   // StockEmulator.exe [XmlFileName] [Days]
   //
   DayIntervals = atoi(argv[2]);
-  printf("DayIntervals = %d\n",DayIntervals);
 
   fp = fopen(argv[1],"r");
   if (fp == NULL) {
@@ -598,22 +619,28 @@ int main(int argc, char **argv)
   //
   // Init the stock data struct
   //
-  InitStockDailyInfoData (fp, StockDailyData, DayIntervals);
+  InitStockDailyInfoData (fp, DayIntervals);
 
   //
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
+
   ReturnRecords = NULL;
-  StartDayIndex = FIRST_DAILY_DATA;  /*Start from 60 days*/
+ 
+  StartDayIndex = FIRST_DAILY_DATA+3;  /*Start from 20+3 days*/
+   
   EndDayIndex = StartDayIndex + DayIntervals;
-  StockSimulator (StartDayIndex, EndDayIndex, StockDailyData, ReturnRecords);
+  
+  printf("DayIntervals = %d, Start from index %d (FIRST_DAILY_DATA+3) to %d days\n",DayIntervals,StartDayIndex,EndDayIndex);  
+
+  StockSimulator (StartDayIndex, EndDayIndex, &ReturnRecords);
 
   //
   // Calculate profit base on the records
   //
   AnalysisProfit (ReturnRecords);
 
-  free(StockDailyData);
-
+  free(InfoBuffer);
+  XML_ParserFree(Parser);
   return 0;
 }
