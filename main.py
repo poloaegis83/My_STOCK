@@ -84,7 +84,7 @@ def Get_Data(stock_id,year,month,IsTWSE):
             if j % 9 == 4:  # 最高
                Price.set('High',(td.getText().rstrip()).replace('.',"") )
             if j % 9 == 5:  # 最低
-               Price.set('low',(td.getText().rstrip()).replace('.',"") )              
+               Price.set('Low',(td.getText().rstrip()).replace('.',"") )              
             if j % 9 == 6:  # 收盤             
                Price.set('End',(td.getText().rstrip()).replace('.',"") )
             j += 1
