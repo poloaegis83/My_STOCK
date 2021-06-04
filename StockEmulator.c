@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MA5_OVER_MA10 101
-#define STOP_LOSS_LIMIT 15
+#define MA5_OVER_MA10 100.1
+#define STOP_LOSS_LIMIT 0.02
 #define FIRST_DAILY_DATA 20 /*For MA calculate*/
-#define BUFF_SIZE        100000
+#define BUFF_SIZE        300000
 #define DEBUG(Expression)        \
           if(DebugFlag){         \
 		  	printf(Expression);  \
@@ -63,7 +63,7 @@ struct _Trade_Record {
   TRADE_RECORD  *Next;
 };
 
-char DebugFlag = 0;
+char DebugFlag = 1;
 
 void InitStockDailyInfoData (FILE *fp, int days);
 void StockSimulator (int StartDayIndex, int EndDayIndex, TRADE_RECORD **ReturnRecordsHead);
@@ -80,14 +80,23 @@ void ElementData  (void *data, const char *content, int length);
 char        StockIdFlag;
 int         TheStockID;
 int         Depth;              /*Global element depth*/
+int         GlobalDays;
 DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 DAILY_INFO  *BuffInitPtr;
 XML_Parser   Parser;
+int         ChipAnalysisFlag; /*Featrue*/
+float       MA5_Over_MA10;
 
 void StartElement (void *data, const char *Element, const char **attribute)
 { 
   int i;
   const char *Value;
+
+  Depth++;
+  
+  if(GlobalDays == 0){
+  	 return;
+  }
 
   if ( !strcmp("Daily",Element) || !strcmp("Price",Element) || !strcmp("Difference",Element)) // Element = Daily or Price or Difference
   {
@@ -96,7 +105,7 @@ void StartElement (void *data, const char *Element, const char **attribute)
 	  Value = attribute[i+1];
 	  if(!strcmp("Index",attribute[i]))
 	  {
-        BuffInitPtr->DayIndex      = (int)atoi(Value);
+        BuffInitPtr->DayIndex      = (int)atoi(Value);	
 	  }
 	  if(!strcmp("Years",attribute[i]))
 	  {
@@ -152,16 +161,20 @@ void StartElement (void *data, const char *Element, const char **attribute)
     StockIdFlag = 1;
   }
 
-  Depth++;
 }
 void EndElement   (void *Data, const char *Element)
 {
+  Depth--;
+  if(GlobalDays == 0){
+  	 return;
+  }
   if (!strcmp("Daily",Element))
   {
 	BuffInitPtr->StockID = TheStockID;
     BuffInitPtr++;    /*Move the pointer to next day*/
+	GlobalDays--;
   }
-  Depth--;
+
 }
 void ElementData  (void *Data, const char *Content, int Length)
 {
@@ -212,10 +225,12 @@ void InitStockDailyInfoData(FILE *fp , int days)
   
   DEBUG("InitStockDailyInfoData Start\n");  
   //
-  // Allcate memory to buffer, the first data should 60 (depends on FIRST_DAILY_DATA) days before start day for calculate MA60 (depends on FIRST_DAILY_DATA) .
+  // Allcate memory to buffer, the first data should 20 (depends on FIRST_DAILY_DATA) days before start day for calculate MA20 (depends on FIRST_DAILY_DATA) .
   //
-  InfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA));
+  InfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA+23));
   BuffInitPtr = InfoBuffer;
+
+  GlobalDays = days+FIRST_DAILY_DATA+23;  //Prevent init data over the buffer
 
   Parser   = XML_ParserCreate(NULL);
 
@@ -427,7 +442,7 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
   char       LD_check  = 0;
   char       RSI_check = 0;
   char       KD_check  = 0;
-
+  float      Percent;
   Daily = InfoBuffer + StartDayIndex; 
 
   for(CurrentIndex = StartDayIndex; CurrentIndex < EndDayIndex; CurrentIndex++)
@@ -444,9 +459,10 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
 	New10MA = ((LastDay->MA10)*10 - (Daily-10)->End + NewPriceS)/10;
 	New20MA = ((LastDay->MA20)*20 - (Daily-20)->End + NewPriceS)/20;
 	printf("Price(S) = %d, New5MA = %d, New10MA = %d, New20MA = %d\n",NewPriceS,New5MA,New10MA,New20MA);
-    if(NewPriceS > New5MA && New5MA > New10MA && New10MA >= New20MA)
+    if(NewPriceS > New5MA && New5MA >= New10MA && New10MA >= New20MA)
     {
-      if( (New5MA/New10MA) >= (MA5_OVER_MA10)/100) //MA5 should over MA10 101%
+	  Percent = ((float)New5MA/(float)New10MA)*100;
+      if (Percent >= MA5_OVER_MA10) //MA5 should over MA10 101%
       {
         MA_checkS = 1;
       }
@@ -460,9 +476,10 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
 	New10MA = ((LastDay->MA10)*10 - (Daily-10)->End + NewPriceE)/10;
 	New20MA = ((LastDay->MA20)*20 - (Daily-20)->End + NewPriceE)/20;
 	printf("Price(E) = %d, New5MA = %d, New10MA = %d, New20MA = %d\n",NewPriceE,New5MA,New10MA,New20MA);	
-    if(NewPriceE > New5MA && New5MA > New10MA && New10MA >= New20MA)
+    if(NewPriceE > New5MA && New5MA >= New10MA && New10MA >= New20MA)
     {
-      if( (New5MA/New10MA) >= (MA5_OVER_MA10)/100) //MA5 should over MA10 101%
+	  Percent = ((float)New5MA/(float)New10MA)*100;	
+      if( Percent >= MA5_OVER_MA10) //MA5 should over MA10 101%
       {
         MA_checkE = 1;
       }
@@ -472,10 +489,16 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
     //
     // Check LeaderDifference, should be a postive number 2 days.
     //
-    //if(LastDay->LeaderDiff)// >0 && Last2Day->LeaderDiff >0)
-    //{
+	if(ChipAnalysisFlag)
+	{
+      if(LastDay->LeaderDiff >0 && Last2Day->LeaderDiff >0)
+      {
        LD_check = 1;
-    //}
+      }
+	} else
+	{
+	  LD_check = 1;
+	}
 
     //
     // Check RSI, KD
@@ -485,16 +508,17 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
     //
     // Return day index and Price
     //
-    //if(MA_check && LD_check)
 	if(MA_checkS && LD_check){
       *BuyPrice    = NewPriceS;
       *BuyDayIndex = CurrentIndex;
+	  printf("V(S)\n");
 	  return;	
     }
 	if (MA_checkE && LD_check) 
 	{
       *BuyPrice    = NewPriceE;
       *BuyDayIndex = CurrentIndex;
+	  printf("V(E)\n");
 	  return;
 	}
       
@@ -529,7 +553,8 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayI
   int        New5MA;
   int        New10MA;
   int        New20MA;  
-
+  float      Percent;
+  
   DEBUG("FindSellPoint Start\n"); 
 
   Daily = InfoBuffer+BuyDayIndex;
@@ -547,24 +572,41 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayI
 	New20MA = ((LastDay->MA20)*20 - (Daily-20)->End + NewPriceS)/20;
 	printf("Price(S) = %d, New5MA = %d, New10MA = %d, New20MA = %d\n",NewPriceS,New5MA,New10MA,New20MA);
     //
-    // Check MA
+    // Check MA Start
     //
     // 3 Cases of LeaderDifference
-    //  
-    //if (LastDay->LeaderDiff < 0 && Last2Day->LeaderDiff < 0) {
-    //  if(NewPriceS < New20MA) {
-    //    ConditionCheckS = 1;
-    //  }  
-    //} else if (LastDay->LeaderDiff < 0) {
-   //   if(NewPriceS < New10MA) {
-   //     ConditionCheckS = 1;	
-    //  }
-    //} else if(LastDay->LeaderDiff >= 0) {
-      if(NewPriceS < New5MA) {
-        ConditionCheckS = 1;
-      }
-    //}
-	
+    //
+    if(ChipAnalysisFlag)
+    {
+      if (LastDay->LeaderDiff > 0 && Last2Day->LeaderDiff > 0) 
+        {
+          if(NewPriceS < New10MA) 
+	      {
+            ConditionCheckS = 1;
+          }
+	    }
+      if (LastDay->LeaderDiff > 0) 
+        {
+          if(NewPriceS < New10MA) 
+	      {
+            ConditionCheckS = 1;	
+          }
+        } 
+      if(LastDay->LeaderDiff <= 0 && ChipAnalysisFlag) 
+	    {
+          if(NewPriceS < New5MA) 
+	      {
+            ConditionCheckS = 1;
+          }
+        }
+    }else
+    {
+      if(NewPriceS < New5MA) 
+	    {
+          ConditionCheckS = 1;
+        }
+    }
+
 	/*
     if(NewPriceS < New5MA) {
       ConditionCheckS = 1;
@@ -572,8 +614,12 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayI
     //
     // Check for stop loss order
     //
-    if ( (NewPriceS < BuyPrice) && ((BuyPrice - NewPriceS)/BuyPrice > STOP_LOSS_LIMIT) )// if loss more than 15% 
+	//print("stoploss = %f \n",(((float)BuyPrice - (float)NewPriceS) /(float)BuyPrice) );
+	
+	Percent = (float)(BuyPrice - NewPriceS) /(float)BuyPrice;
+    if ( (NewPriceS < BuyPrice) && (Percent > STOP_LOSS_LIMIT) )// if loss more than 15% 
     {
+	  printf("  Percent = %.2f\n",Percent);
       ConditionCheckS = 1;
     }
 
@@ -583,19 +629,42 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayI
 	New20MA = ((LastDay->MA20)*20 - (Daily-20)->End + NewPriceE)/20;
 	printf("Price(E) = %d, New5MA = %d, New10MA = %d, New20MA = %d\n",NewPriceE,New5MA,New10MA,New20MA);
 	
-    //if (LastDay->LeaderDiff < 0 && Last2Day->LeaderDiff < 0) {
-    //  if(NewPriceE < New20MA) {
-    //   ConditionCheckS = 1;
-    //  }  
-    //} else if (LastDay->LeaderDiff < 0) {
-   //   if(NewPriceE < New10MA) {
-    //    ConditionCheckS = 1;	
-    //  }
-   // } else if(LastDay->LeaderDiff >= 0) {
-      if(NewPriceE < New5MA) {
-        ConditionCheckS = 1;
-      }
-   // }
+    //
+    // Check MA End
+    //
+    // 3 Cases of LeaderDifference
+    //
+
+    if(ChipAnalysisFlag)
+    {
+      if (LastDay->LeaderDiff > 0 && Last2Day->LeaderDiff > 0) 
+        {
+          if(NewPriceE < New20MA) 
+	      {
+            ConditionCheckE = 1;
+          }
+	    }
+      if (LastDay->LeaderDiff > 0) 
+        {
+          if(NewPriceE < New10MA) 
+	      {
+            ConditionCheckE = 1;	
+          }
+        } 
+      if(LastDay->LeaderDiff <= 0 && ChipAnalysisFlag) 
+	    {
+          if(NewPriceE < New5MA) 
+	      {
+            ConditionCheckE = 1;
+          }
+        }
+    }else
+    {
+      if(NewPriceE < New5MA) 
+	    {
+          ConditionCheckE = 1;
+        }
+    }
 	/*
     if(NewPriceE < New5MA) {
       ConditionCheckE = 1;
@@ -603,11 +672,13 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayI
     //
     // Check for stop loss order
     //
-    if ( (NewPriceE < BuyPrice) && ((BuyPrice - NewPriceE)/BuyPrice > STOP_LOSS_LIMIT) )// if loss more than 10% 
+    Percent = (float)(BuyPrice - NewPriceE) /(float)BuyPrice;
+    if ( (NewPriceE < BuyPrice) && (Percent > STOP_LOSS_LIMIT))// if loss more than 10% 
     {
+	  printf("  Percent = %.2f\n",Percent);	
       ConditionCheckE = 1;
     }
-	
+
     //
     // Check RSI, KD
     //
@@ -619,13 +690,15 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayI
     if(ConditionCheckS)
     {
       *SellDayIndex = CurrentIndex;
-      *SellPrice    = NewPriceS;	  
+      *SellPrice    = NewPriceS;
+	  printf("V(S)\n");  
       return;
     }
 	if (ConditionCheckE)
 	{
       *SellDayIndex = CurrentIndex;
-      *SellPrice    = NewPriceE;	  
+      *SellPrice    = NewPriceE;
+	  printf("V(E)\n");  	  
       return;
 	}
 	
@@ -642,34 +715,44 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayI
 
 void AnalysisProfit (TRADE_RECORD  *TradeRecords)
 {
-   int  Count;
-   int  EarnedMoney;
-   int  LoseMoney;
+   int   Count;
+   int   WinCount;
+   int   LoseCount;
+   int   EarnedMoney;
+   int   LoseMoney;
+   float Percent;
+   float AverWin;
+   float AverLose;   
    DAILY_INFO *Daily; 
 
+   
    Daily = InfoBuffer;
    
    DEBUG("AnalysisProfit Start\n");
    EarnedMoney = 0;
    LoseMoney   = 0;
-   Count       = 0;
+   WinCount    = 0;
+   LoseCount   = 0;
+   Count       = 1;
 
   printf("===============================================\n");   
    do{
-       printf("\nTradeRecords count %d\n", Count);
+       printf("\nTradeRecord: %d\n", Count);
 
        if((TradeRecords->BuyPrice != 0 || TradeRecords->BuyDayIndex != 0) && (TradeRecords->SellPrice != 0 || TradeRecords->SellDayIndex != 0)) /*if buy point and sell point exist*/ 
        {
-         printf("Buy: DayIndex:%d, price:%d |||||| Sell: DayIndex:%d, price:%d\n", TradeRecords->BuyDayIndex+1, TradeRecords->BuyPrice, TradeRecords->SellDayIndex+1, TradeRecords->SellPrice);
-		 printf("%d/%d/%d----------------",(Daily+TradeRecords->BuyDayIndex)->Dates.Years,(Daily+TradeRecords->BuyDayIndex)->Dates.Months,(Daily+TradeRecords->BuyDayIndex)->Dates.Days);                    
-         printf("/--------------%d/%d/%d\n",(Daily+TradeRecords->SellDayIndex)->Dates.Years,(Daily+TradeRecords->SellDayIndex)->Dates.Months,(Daily+TradeRecords->SellDayIndex)->Dates.Days);
+         printf("[Buy]: DayIndex:%d, price:%d  ====> [Sell]: DayIndex:%d, price:%d\n", TradeRecords->BuyDayIndex+1, TradeRecords->BuyPrice, TradeRecords->SellDayIndex+1, TradeRecords->SellPrice);
+		 printf("%d/%d/%d-------------------",(Daily+TradeRecords->BuyDayIndex)->Dates.Years,(Daily+TradeRecords->BuyDayIndex)->Dates.Months,(Daily+TradeRecords->BuyDayIndex)->Dates.Days);                    
+         printf("-----------------%d/%d/%d\n",(Daily+TradeRecords->SellDayIndex)->Dates.Years,(Daily+TradeRecords->SellDayIndex)->Dates.Months,(Daily+TradeRecords->SellDayIndex)->Dates.Days);
 		 if(TradeRecords->BuyPrice <= TradeRecords->SellPrice)
          {
            EarnedMoney += (TradeRecords->SellPrice - TradeRecords->BuyPrice);
            printf("EarnedMoney = %d\n", TradeRecords->SellPrice - TradeRecords->BuyPrice);
+		   WinCount++;
          } else {
            LoseMoney += (TradeRecords->BuyPrice - TradeRecords->SellPrice);
-           printf("LoseMoney = %d\n",TradeRecords->BuyPrice - TradeRecords->SellPrice);         
+           printf("LoseMoney = %d\n",TradeRecords->BuyPrice - TradeRecords->SellPrice);
+		   LoseCount++;   
          }
          Count++;
        }
@@ -677,7 +760,11 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords)
      printf("===============================================\n");    	 
    } while(TradeRecords != NULL);
 
-  printf("\nTotal = %d\n",EarnedMoney - LoseMoney);
+  Percent = (float)WinCount/(float)Count;
+  AverWin  = (float)EarnedMoney/(float)WinCount;
+  AverLose = (float)LoseMoney/(float)LoseCount;
+  printf("\nTotal Earned = %d, Average Win/Lose money per trade = %.1f/%.1f \n",EarnedMoney - LoseMoney, AverWin, AverLose);
+  printf("Win/Lose/Total = %d/%d/%d , %.1f %%Chance to Wins\n", WinCount, LoseCount, Count, Percent*100);
   printf("===============================================\n");    
   DEBUG("AnalysisProfit End\n");    
 }
@@ -689,18 +776,33 @@ int main(int argc, char **argv)
   int           EndDayIndex;
   TRADE_RECORD  *ReturnRecords;
   FILE          *fp;  
-
+  int           ArgIndex;
   // 
   // Argument format:
-  // StockEmulator.exe [XmlFileName] [Days]
+  // StockEmulator.exe [XmlFileName] [Days] -c(ChipAnalysisFlag on)
   //
-  DayIntervals = atoi(argv[2]);
+  ChipAnalysisFlag = 0;
 
-  fp = fopen(argv[1],"r");
-  if (fp == NULL) {
-	printf("open file error!!\n");
-	return 1;  
-  }
+  for(ArgIndex = 0; ArgIndex < argc; ArgIndex++)
+  {
+  	 if(ArgIndex == 1)
+	 {
+       fp = fopen(argv[1],"r");
+       if (fp == NULL) {
+	     printf("open file error!!\n");
+	     return 1;  
+       }
+	 }
+	 if(ArgIndex == 2)
+	 {
+	   DayIntervals = atoi(argv[2]);	
+	 }
+	 if(!strcmp("-c",argv[ArgIndex]))
+	 {
+	   ChipAnalysisFlag = 1;
+	 }
+
+ }
 
   //
   // Init the stock data struct
