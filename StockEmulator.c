@@ -4,8 +4,6 @@
 char DebugFlag = 0;
 
 void InitStockDailyInfoData (FILE *fp, int days);
-//void StockSimulator1 (int StartDayIndex, int EndDayIndex, TRADE_RECORD **ReturnRecordsHead);
-//void AnalysisProfit (TRADE_RECORD  *TradeRecords);
 void CalculateMA (int days);
 void CalculateRSI (int days);
 void CalculateKDJ (int days);
@@ -22,9 +20,6 @@ DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 DAILY_INFO  *BuffInitPtr;
 XML_Parser   Parser;
 int         ChipAnalysisFlag; /*Featrue*/
-float       MA5_Over_MA10;
-
-DAILY_INFO  *Sim2Curr;
 
 void StartElement (void *data, const char *Element, const char **attribute)
 { 
@@ -200,7 +195,6 @@ void InitStockDailyInfoData(FILE *fp , int days)
   
   DEBUG("InitStockDailyInfoData End\n");   
 }
-
 
 void CalculateMA(int days)
 {
@@ -543,7 +537,7 @@ int main(int argc, char **argv)
   printf("DayIntervals = %d, Start from day index %d(Start) to %d(End)\n",DayIntervals,StartDayIndex,EndDayIndex);  
 
   StockSimulator1 (StartDayIndex, EndDayIndex, &ReturnRecords);
-
+  //StockSimulator2 (StartDayIndex, EndDayIndex, &ReturnRecords);
   //
   // Calculate profit base on the records
   //

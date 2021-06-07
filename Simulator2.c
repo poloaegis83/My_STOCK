@@ -1,6 +1,7 @@
 #include "DataDefine.h"
 
-char   OpenOrClose;
+char           OpenOrClose;
+DAILY_INFO     *Sim2Curr;
 TRADE_RECORD2  *Record2Head = NULL;
 TRADE_RECORD2  *Record2Current = NULL;
 
@@ -742,18 +743,73 @@ void TradeRule()
   AtClose();
 }
 
+void AnalysisProfit2 (TRADE_RECORD2  *TradeRecords2)
+{
+  int  MoneyIn, MoneyOut;
+  int  BuyCount, SellCount;
+  int  Price,Shares,Counter;
+  int  TotalIn,TotalOut,SharesInTotal,SharesOutTotal;
+  float  AvgBuyPrice, AvgSellPrice;
+
+  TotalIn   = 0;
+  TotalOut  = 0;
+  Counter   = 0;
+  BuyCount  = 0;
+  SellCount = 0;
+  SharesOutTotal = 0;
+  SharesInTotal  = 0;
+
+  do{
+    MoneyIn  = 0;
+    MoneyOut = 0;
+    Shares   = 0;
+    
+    Price    = TradeRecords2->Price;
+    Shares   = TradeRecords2->ShareTrades;
+    if(TradeRecords2->BuyOrSell) //sell
+    {
+      MoneyOut       += Price * Shares;
+      SharesOutTotal += Shares;
+      AvgSellPrice   += Price;
+      SellCount  += 1;      
+    } else // buy
+    {
+      MoneyIn        +=  Price * Shares;
+      SharesInTotal  += Shares;
+      AvgBuyPrice    += Price;
+      BuyCount  += 1;
+    }
+    TotalIn  += MoneyIn;
+    TotalOut += MoneyOut;
+    AvgBuyPrice  = AvgBuyPrice  / (float)BuyCount;
+    AvgSellPrice = AvgSellPrice / (float)SellCount;
+
+    printf("TradeRecords(%d)--%d/%d/%d--\n",Counter+1,TradeRecords2->Dates.Years,TradeRecords2->Dates.Months,TradeRecords2->Dates.Days);
+    printf("Action: ");
+
+    if(TradeRecords2->BuyOrSell)
+      printf("Out ,");
+    else
+      printf("In ,");
+
+    printf("Shares = %d, Price = %d, Total Price = %d \n",Shares,Price,Shares*Price);
+    printf("===============================================\n");
+
+    Counter += 1;	 
+    TradeRecords2 = TradeRecords2->Next;
+  } while(TradeRecords2 != NULL);
+
+  printf("\nTotal Earned = %d, Buy/Sell/Total Count = %d/%d/%d, Average Buy/Sell Price = %1.f/%1.f", TotalOut - TotalIn,BuyCount,SellCount,Counter,AvgBuyPrice,AvgSellPrice);
+}
+
 void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecordsHead)
 {
   int         Current;
 
   for(Current = StartDayIndex; Current <= EndDayIndex; Current++)
   {
-    Sim2Curr = InfoBuffer + Current -1; /* Move Day pointer to next day */
+    Sim2Curr = InfoBuffer + Current -1; /* Move day pointer to next day */
     TradeRule();
   }
 }
 
-void AnalysisProfit2 (TRADE_RECORD2  *TradeRecords2)
-{
-
-}

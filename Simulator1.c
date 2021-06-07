@@ -338,7 +338,7 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords)
          }
          Count++;
        }
-	 TradeRecords = TradeRecords->Next;
+	   TradeRecords = TradeRecords->Next;
      printf("===============================================\n");    	 
    } while(TradeRecords != NULL);
 
