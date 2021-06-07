@@ -325,23 +325,28 @@ int PRICE()
   }
 }
 
-int DIFFERENCE(char* Type, ...) // days average
+int DIFF_AT(char* Type, int Days)
 {
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
   if(!strcmp("leader",Type))
   {
-    return (Sim2Curr-1)->LeaderDiff;
+    return (Sim2Curr-Days)->LeaderDiff;
   }
   if(!strcmp("foreign",Type))
   {
-    return (Sim2Curr-1)->ForeignInvestorsDiff;
+    return (Sim2Curr-Days)->ForeignInvestorsDiff;
   }
   if(!strcmp("investment",Type))
   {
-    return (Sim2Curr-1)->InvestmentTrustDiff;
+    return (Sim2Curr-Days)->InvestmentTrustDiff;
   }
   if(!strcmp("dealers",Type))
   {
-    return (Sim2Curr-1)->DealersDiff;
+    return (Sim2Curr-Days)->DealersDiff;
   }
 
   //
@@ -349,6 +354,228 @@ int DIFFERENCE(char* Type, ...) // days average
   //
   printf("Error:DIFFERENCE");
   return 0;  
+}
+
+int DIFF_TOTAL_IN(char* Type, int Days) // Total in x days
+{
+  int Total, i;
+
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  Total = 0;
+
+  if (!strcmp("leader",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      Total += DIFF("leader", i);
+    }    
+  }
+  if(!strcmp("foreign",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      Total += DIFF("foreign", i);
+    }    
+  }
+  if(!strcmp("investment",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      Total += DIFF("investment", i);
+    }    
+  }
+  if(!strcmp("dealers",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      Total += DIFF("dealers", i);
+    }    
+  }
+  return Total;
+  //
+  // Should not reach here!
+  //
+  printf("Error:DIFFERENCE");
+  //return 0;  
+}
+
+int DIFF_AVG_IN(char* Type, int Days) // Total in x days
+{
+  int Total, i;
+
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  Total = 0;
+
+  if (!strcmp("leader",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      Total += DIFF("leader", i);
+    }    
+  }
+  if(!strcmp("foreign",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      Total += DIFF("foreign", i);
+    }    
+  }
+  if(!strcmp("investment",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      Total += DIFF("investment", i);
+    }    
+  }
+  if(!strcmp("dealers",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      Total += DIFF("dealers", i);
+    }    
+  }
+  return Total / Days;
+  //
+  // Should not reach here!
+  //
+  printf("Error:DIFFERENCE");
+  //return 0;  
+}
+
+int IS_DIFF_POSTIVE_IN(char* Type, int Days) // days average
+{
+  char Condition;
+  int  i;
+
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  Condition = 1;
+
+  if (!strcmp("leader",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      if(DIFF("leader", i) < 0)
+      {
+        Condition = 0;
+      }
+    }    
+  }
+  if(!strcmp("foreign",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      if(DIFF("foreign", i) < 0)
+      {
+        Condition = 0;
+      }
+    }     
+  }
+  if(!strcmp("investment",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      if(DIFF("investment", i) < 0)
+      {
+        Condition = 0;
+      }
+    }    
+  }
+  if(!strcmp("dealers",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      if(DIFF("dealers", i) < 0)
+      {
+        Condition = 0;
+      }
+    }     
+  }
+  
+  return Condition;
+
+  //
+  // Should not reach here!
+  //
+  printf("Error:DIFFERENCE");
+  //return 0;  
+}
+
+int IS_DIFF_NEGATIVE_IN(char* Type, int Days) // days average
+{
+  char Condition;
+  int  i;
+
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  Condition = 1;
+
+  if (!strcmp("leader",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      if(DIFF("leader", i) > 0)
+      {
+        Condition = 0;
+      }
+    }    
+  }
+  if(!strcmp("foreign",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      if(DIFF("foreign", i) > 0)
+      {
+        Condition = 0;
+      }
+    }     
+  }
+  if(!strcmp("investment",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      if(DIFF("investment", i) > 0)
+      {
+        Condition = 0;
+      }
+    }    
+  }
+  if(!strcmp("dealers",Type))
+  {
+    for ( i = 1; i <= Days; i++)
+    {
+      if(DIFF("dealers", i) > 0)
+      {
+        Condition = 0;
+      }
+    }     
+  }
+  
+  return Condition;
+
+  //
+  // Should not reach here!
+  //
+  printf("Error:DIFFERENCE");
+  //return 0;  
 }
 
 float LAST_MA(char* Type)
