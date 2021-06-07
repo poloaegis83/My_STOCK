@@ -372,28 +372,28 @@ int DIFF_TOTAL_IN(char* Type, int Days) // Total in x days
   {
     for ( i = 1; i <= Days; i++)
     {
-      Total += DIFF("leader", i);
+      Total += DIFF_AT("leader", i);
     }    
   }
   if(!strcmp("foreign",Type))
   {
     for ( i = 1; i <= Days; i++)
     {
-      Total += DIFF("foreign", i);
+      Total += DIFF_AT("foreign", i);
     }    
   }
   if(!strcmp("investment",Type))
   {
     for ( i = 1; i <= Days; i++)
     {
-      Total += DIFF("investment", i);
+      Total += DIFF_AT("investment", i);
     }    
   }
   if(!strcmp("dealers",Type))
   {
     for ( i = 1; i <= Days; i++)
     {
-      Total += DIFF("dealers", i);
+      Total += DIFF_AT("dealers", i);
     }    
   }
   return Total;
@@ -420,28 +420,28 @@ int DIFF_AVG_IN(char* Type, int Days) // Total in x days
   {
     for ( i = 1; i <= Days; i++)
     {
-      Total += DIFF("leader", i);
+      Total += DIFF_AT("leader", i);
     }    
   }
   if(!strcmp("foreign",Type))
   {
     for ( i = 1; i <= Days; i++)
     {
-      Total += DIFF("foreign", i);
+      Total += DIFF_AT("foreign", i);
     }    
   }
   if(!strcmp("investment",Type))
   {
     for ( i = 1; i <= Days; i++)
     {
-      Total += DIFF("investment", i);
+      Total += DIFF_AT("investment", i);
     }    
   }
   if(!strcmp("dealers",Type))
   {
     for ( i = 1; i <= Days; i++)
     {
-      Total += DIFF("dealers", i);
+      Total += DIFF_AT("dealers", i);
     }    
   }
   return Total / Days;
@@ -469,7 +469,7 @@ int IS_DIFF_POSTIVE_IN(char* Type, int Days) // days average
   {
     for ( i = 1; i <= Days; i++)
     {
-      if(DIFF("leader", i) < 0)
+      if(DIFF_AT("leader", i) < 0)
       {
         Condition = 0;
       }
@@ -479,7 +479,7 @@ int IS_DIFF_POSTIVE_IN(char* Type, int Days) // days average
   {
     for ( i = 1; i <= Days; i++)
     {
-      if(DIFF("foreign", i) < 0)
+      if(DIFF_AT("foreign", i) < 0)
       {
         Condition = 0;
       }
@@ -489,7 +489,7 @@ int IS_DIFF_POSTIVE_IN(char* Type, int Days) // days average
   {
     for ( i = 1; i <= Days; i++)
     {
-      if(DIFF("investment", i) < 0)
+      if(DIFF_AT("investment", i) < 0)
       {
         Condition = 0;
       }
@@ -499,7 +499,7 @@ int IS_DIFF_POSTIVE_IN(char* Type, int Days) // days average
   {
     for ( i = 1; i <= Days; i++)
     {
-      if(DIFF("dealers", i) < 0)
+      if(DIFF_AT("dealers", i) < 0)
       {
         Condition = 0;
       }
@@ -532,7 +532,7 @@ int IS_DIFF_NEGATIVE_IN(char* Type, int Days) // days average
   {
     for ( i = 1; i <= Days; i++)
     {
-      if(DIFF("leader", i) > 0)
+      if(DIFF_AT("leader", i) > 0)
       {
         Condition = 0;
       }
@@ -542,7 +542,7 @@ int IS_DIFF_NEGATIVE_IN(char* Type, int Days) // days average
   {
     for ( i = 1; i <= Days; i++)
     {
-      if(DIFF("foreign", i) > 0)
+      if(DIFF_AT("foreign", i) > 0)
       {
         Condition = 0;
       }
@@ -552,7 +552,7 @@ int IS_DIFF_NEGATIVE_IN(char* Type, int Days) // days average
   {
     for ( i = 1; i <= Days; i++)
     {
-      if(DIFF("investment", i) > 0)
+      if(DIFF_AT("investment", i) > 0)
       {
         Condition = 0;
       }
@@ -562,7 +562,7 @@ int IS_DIFF_NEGATIVE_IN(char* Type, int Days) // days average
   {
     for ( i = 1; i <= Days; i++)
     {
-      if(DIFF("dealers", i) > 0)
+      if(DIFF_AT("dealers", i) > 0)
       {
         Condition = 0;
       }
