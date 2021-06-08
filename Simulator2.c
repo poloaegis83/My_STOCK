@@ -1094,7 +1094,6 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
       SharesInTotal  += Shares;
       AvgBuyPrice    += Price;
       BuyCount  += 1;
-      AvgBuyPrice  = AvgBuyPrice  / (float)BuyCount;   
       TotalIn  += MoneyIn;        
     } else //sell
     {
@@ -1102,7 +1101,6 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
       SharesOutTotal += Shares;
       AvgSellPrice   += Price;
       SellCount  += 1;
-      AvgSellPrice = AvgSellPrice / (float)SellCount;
       TotalOut += MoneyOut;        
     }
 
@@ -1127,6 +1125,8 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
 
   } while(TradeRecords2 != NULL);
 
+  AvgBuyPrice  = AvgBuyPrice  / (float)BuyCount;   
+  AvgSellPrice = AvgSellPrice / (float)SellCount;
   TotalRemainValues = (TotalOut - TotalIn) + (LastDayPrice*SharesRemaining);
 
   printf("Last Day Price = %.1f, Shares Remaining = %d, Remaining Shares Values = %.1f\n",LastDayPrice, SharesRemaining, LastDayPrice*SharesRemaining);
