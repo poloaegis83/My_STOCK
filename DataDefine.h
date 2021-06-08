@@ -12,8 +12,8 @@
 #define BUFF_SIZE        300000
 #define DEBUG(Expression)        \
           if(DebugFlag){         \
-		  	printf(Expression);  \
-		  }                      \
+		  	printf(Expression);      \
+		  }                          \
 
 typedef struct _DailyInfo DAILY_INFO;
 typedef struct _Date DATE;
@@ -31,11 +31,11 @@ struct _Date {
 };
 
 struct _MA_Value {
-   int MA5;
-   int MA10;
-   int MA20;
-   int MA60;
-   int MA120;
+   float MA5;
+   float MA10;
+   float MA20;
+   float MA60;
+   float MA120;
 };
 
 struct _MACD_Value {
@@ -65,10 +65,10 @@ struct _RSI_Value {
 struct _DailyInfo {
    int StockID;
 
-   int Start;
-   int End;
-   int High;
-   int Low;
+   float Start;
+   float End;
+   float High;
+   float Low;
 
    int LeaderDiff;
    int ForeignInvestorsDiff;
@@ -88,8 +88,8 @@ struct _Trade_Record {
   int       BuyDayIndex;
   int       SellDayIndex;
 
-  int       BuyPrice;
-  int       SellPrice;
+  float       BuyPrice;
+  float       SellPrice;
 
   DATE          BuyDates;
   DATE          SellDates;
@@ -100,7 +100,7 @@ struct _Trade_Record {
 struct _Trade_Record2 {
   int       DayIndex;
   int       BuyOrSell;  /* 1 = buy, 0 = sell */
-  int       Price;
+  float     Price;
   int       ShareTrades;
   int       SharesRemaining;
   DATE      Dates;
@@ -110,6 +110,7 @@ struct _Trade_Record2 {
 
 extern DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 extern char DebugFlag;
+
 //
 // Emulator 1
 //
@@ -122,7 +123,6 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords);
 //
 // Emulator 2
 //
-extern DAILY_INFO  *Sim2Curr;
 extern char   OpenOrClose;
 extern TRADE_RECORD2  *Record2Head;
 extern TRADE_RECORD2  *Record2Current;

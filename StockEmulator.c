@@ -56,20 +56,20 @@ void StartElement (void *data, const char *Element, const char **attribute)
 	
 	  if(!strcmp("Start",attribute[i]))
 	  {
-        BuffInitPtr->Start         = (int)atoi(Value);
+      BuffInitPtr->Start         = (float)atoi(Value) / 100;
 	  }
 	  if(!strcmp("High",attribute[i]))
 	  {
-	    BuffInitPtr->High          = (int)atoi(Value);
+	    BuffInitPtr->High          = (float)atoi(Value) / 100;
 	  }
 	  if(!strcmp("Low",attribute[i]))
 	  {
-	    BuffInitPtr->Low           = (int)atoi(Value); 
+	    BuffInitPtr->Low           = (float)atoi(Value) / 100; 
 	  }
 	  if(!strcmp("End",attribute[i]))
 	  {
-	    BuffInitPtr->End           = (int)atoi(Value);
-	  }	  
+	    BuffInitPtr->End           = (float)atoi(Value) / 100;
+	  }
 
 	  if(!strcmp("DealersDiff",attribute[i]))
 	  {
@@ -130,9 +130,9 @@ void PrintInfo(days)
   for(DailyIndex = 0; DailyIndex < days+FIRST_DAILY_DATA_INDEX -1 ; DailyIndex++)
   {    
     printf("DayIndex(%d)   %d/%d/%d            = %d\n",Daily->StockID,Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,Daily->DayIndex);
-    printf("Start,High,Low,End                      = %d,%d,%d,%d\n",Daily->Start,Daily->High,Daily->Low,Daily->End);
+    printf("Start,High,Low,End                      = %.1f,%.1f,%.1f,%.1f\n",Daily->Start,Daily->High,Daily->Low,Daily->End);
     printf("Diff Leader,Foreign,Investment,Dealers  = %d,%d,%d,%d\n",Daily->LeaderDiff,Daily->ForeignInvestorsDiff,Daily->InvestmentTrustDiff,Daily->DealersDiff);
-    printf("MA5,10,20,60                            = %d%,%d,%d,%d\n",Daily->MA.MA5,Daily->MA.MA10,Daily->MA.MA20,Daily->MA.MA60);
+    printf("MA5,10,20,60                            = %.1f,%.1f,%.1f,%.1f\n",Daily->MA.MA5,Daily->MA.MA10,Daily->MA.MA20,Daily->MA.MA60);
     printf("K,D,J                                   = %.1f, %.1f, %.1f\n",Daily->KDJ.K, Daily->KDJ.D, Daily->KDJ.J);
     printf("RSI(6),RSI(12)                          = %.1f, %.1f\n",Daily->RSI.RSI_6,Daily->RSI.RSI_12);	
     printf("DIF,EMA12,EMA26,MACD9,OSC               = %.1f, %.1f, %.1f, %.1f, %.1f\n",Daily->MACD.DIF,Daily->MACD.EMA12,Daily->MACD.EMA26,Daily->MACD.MACD9,Daily->MACD.OSC);	 
@@ -191,7 +191,7 @@ void InitStockDailyInfoData(FILE *fp , int days)
   
   CalculateMACD (days);
 
-  PrintInfo(days);
+  //PrintInfo(days);
   
   DEBUG("InitStockDailyInfoData End\n");   
 }
@@ -284,9 +284,9 @@ void CalculateMACD(int days)
 
   for(DailyCounter = 1; DailyCounter < days + (FIRST_DAILY_DATA_INDEX) - 1; DailyCounter++)
   {
-    EMA12 = ( (Daily-1)->MACD.EMA12 * 11 + (float)(Daily->End) * 2 ) /13;
-    EMA26 = ( (Daily-1)->MACD.EMA26 * 25 + (float)(Daily->End) * 2 ) /27;
-    DIF   = (EMA12 - EMA26)/100;
+    EMA12 = ( (Daily-1)->MACD.EMA12 * 11 + (Daily->End) * 2 ) /13;
+    EMA26 = ( (Daily-1)->MACD.EMA26 * 25 + (Daily->End) * 2 ) /27;
+    DIF   = EMA12 - EMA26;
     MACD9 = ( (Daily-1)->MACD.MACD9 * 8 + DIF * 2 ) /10;
     Daily->MACD.EMA12    = EMA12;
     Daily->MACD.EMA26    = EMA26;
@@ -427,8 +427,8 @@ void CalculateKDJ(int days)
   // Calculate KD data write into DAILY_INFO.
   //
 
-  int         Highest;
-  int         Lowest;
+  float         Highest;
+  float         Lowest;
   int         DailyCounter;
   int         i;
   int         RSV_n;
@@ -469,7 +469,7 @@ void CalculateKDJ(int days)
       }
     }
     //printf("After Daily(9) Highest= %d Loweest =%d  \n\n", Highest, Lowest);
-    Daily->KDJ.RSV = ((float)(Daily->End - Lowest) / (float)(Highest - Lowest)) * 100;
+    Daily->KDJ.RSV = (Daily->End - Lowest) / (Highest - Lowest) * 100;
     Daily->KDJ.K = ((Daily-1)->KDJ.K * 2 / 3) +  (Daily->KDJ.RSV / 3);  /*Pervious K * 2/3 + todays RSV *1/3 */
     Daily->KDJ.D = ((Daily-1)->KDJ.D * 2 / 3) +  (Daily->KDJ.K /3);     /*Pervious D * 2/3 + todays K   *1/3 */
     Daily->KDJ.J = Daily->KDJ.K * 3 - Daily->KDJ.D * 2;
@@ -485,6 +485,7 @@ int main(int argc, char **argv)
   int           StartDayIndex;
   int           EndDayIndex;
   TRADE_RECORD  *ReturnRecords;
+  TRADE_RECORD2 *ReturnRecords2;  
   FILE          *fp;  
   int           ArgIndex;
   // 
@@ -503,6 +504,7 @@ int main(int argc, char **argv)
 	     return 1;  
        }
 	 }
+
 	 if(ArgIndex == 2)
 	 {
 	   DayIntervals = atoi(argv[2]);
@@ -536,13 +538,13 @@ int main(int argc, char **argv)
 
   printf("DayIntervals = %d, Start from day index %d(Start) to %d(End)\n",DayIntervals,StartDayIndex,EndDayIndex);  
 
-  StockSimulator1 (StartDayIndex, EndDayIndex, &ReturnRecords);
-  //StockSimulator2 (StartDayIndex, EndDayIndex, &ReturnRecords);
+  //StockSimulator1 (StartDayIndex, EndDayIndex, &ReturnRecords);
+  StockSimulator2 (StartDayIndex, EndDayIndex, &ReturnRecords2);
   //
   // Calculate profit base on the records
   //
-  AnalysisProfit (ReturnRecords);
-
+  //AnalysisProfit (ReturnRecords);
+  AnalysisProfit2 (ReturnRecords2);
   free(InfoBuffer);
   XML_ParserFree(Parser);
   return 0;

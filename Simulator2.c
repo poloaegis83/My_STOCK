@@ -5,42 +5,116 @@ DAILY_INFO     *Sim2Curr;
 TRADE_RECORD2  *Record2Head = NULL;
 TRADE_RECORD2  *Record2Current = NULL;
 
-void BuyOrSell(char options, char *Type, int Shares)
+float PRICE()
+{
+  if(OpenOrClose)
+  {
+    return Sim2Curr->End;
+    printf("PRICE() = %.1f", Sim2Curr->End);
+  } else
+  {
+    return Sim2Curr->Start;
+    printf("PRICE() = %.1f", Sim2Curr->End);
+  }
+}
+
+float LAST_PRICE(char* Type)
+{
+  if(!strcmp("high",Type))
+  {
+    return (Sim2Curr-1)->High;
+  }
+  if(!strcmp("low",Type))
+  {
+    return (Sim2Curr-1)->Low;
+  }
+  if(!strcmp("start",Type))
+  {
+    return (Sim2Curr-1)->Start;
+  }
+  if(!strcmp("end",Type))
+  {
+    return (Sim2Curr-1)->End;
+  }
+
+  //
+  // Should not reach here!
+  //
+  printf("Error:LAST_PRICE");
+  return 0;    
+}
+
+void BuyOrSell(char Options, char *Type, int Shares)
 {
   TRADE_RECORD2  *Record;
-
-  Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
+  float Price;
+  int   DayIndex;
+  DATE  Dates;
 
   if(!strcmp("Now",Type))
   {
-    Record->Price = PRICE();
-    Record->DayIndex = Sim2Curr->DayIndex;
-    Record->Dates    = Sim2Curr->Dates;    
+    Price    = PRICE();
+    DayIndex = Sim2Curr->DayIndex;
+    Dates    = Sim2Curr->Dates;    
   }
   if(!strcmp("NextBarStart",Type))
   {
-    Record->Price = (Sim2Curr+1)->Start;
-    Record->DayIndex = (Sim2Curr+1)->DayIndex;
-    Record->Dates    = (Sim2Curr+1)->Dates;       
+    Price    = (Sim2Curr+1)->Start;
+    DayIndex = (Sim2Curr+1)->DayIndex;
+    Dates    = (Sim2Curr+1)->Dates;       
   }
   if(!strcmp("NextBarEnd",Type))
   {
-    Record->Price = (Sim2Curr+1)->End;
-    Record->DayIndex = (Sim2Curr+1)->DayIndex;
-    Record->Dates    = (Sim2Curr+1)->Dates;       
+    Price    = (Sim2Curr+1)->End;
+    DayIndex = (Sim2Curr+1)->DayIndex;
+    Dates    = (Sim2Curr+1)->Dates;       
   }
- 
-  Record->BuyOrSell = options ? 1 : 0;
-  Record->SharesRemaining += options ? Shares : -Shares;
+
+  if (Record2Head == NULL)
+  {
+    if(Options) //Block sell with no shares remain
+    {
+      Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
+      Record->Price = Price;
+      Record->Price = DayIndex;
+      Record->Dates = Dates; 
+
+      Record->BuyOrSell = 1;
+      Record->ShareTrades = Shares;  
+      Record->SharesRemaining = Shares;
+      Record->Next     = NULL;
+      Record2Head    = Record;
+      Record2Current = Record;      
+    }
+    return;
+  }
+
+  if(!Options) //Block sell with no shares remain
+  {
+    if(Record2Current->SharesRemaining < Shares)
+    {
+      // Shares remain not enough
+      return;
+    }
+  }
+
+  Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
+
+  Record->Price = Price;
+  Record->Price = DayIndex;
+  Record->Dates = Dates; 
+
+  Record->BuyOrSell = Options ? 1 : 0;
   Record->ShareTrades = Shares;
   Record->Next     = NULL;
 
-  if(Record2Head == NULL)
+
+  if(Options)
   {
-    Record2Head    = Record;
-    Record2Current = Record;
-    Record->SharesRemaining = options ? Shares : -Shares;
-    return;
+  Record->SharesRemaining = Record2Current->SharesRemaining + Shares;
+  } else
+  {
+  Record->SharesRemaining = Record2Current->SharesRemaining - Shares;
   }
 
   Record2Current->Next = Record;
@@ -81,8 +155,8 @@ float LAST_KDJ(char* Type)
 
 float KDJ(char* Type)
 {
-  int        NewPrice;
-  int        Highest,Lowest;
+  float      NewPrice;
+  float      Highest,Lowest;
   int        i,RSV_n;
   float      RSV,K,D,J;
   //
@@ -95,27 +169,36 @@ float KDJ(char* Type)
   //
   // Find Highest and Lowest in last 9 days
   //
-  Highest = NewPrice;
-  Lowest  = NewPrice;
-
-  for(i = 1; i < RSV_n; i++)
+  if(OpenOrClose)
   {
-    if( (Sim2Curr-i)->End > Highest)
+    Highest = Sim2Curr->High;
+    Lowest  = Sim2Curr->Low;
+  }
+  else
+  {
+    Highest = NewPrice;
+    Lowest  = NewPrice;
+  }
+  //printf("before Highest = %f ,Lowest = %f \n",Highest,Lowest);
+
+  for (i = 1; i < RSV_n; i++)
+  {
+    if( (Sim2Curr-i)->High > Highest)
     {
-      Highest = (Sim2Curr-i)->End;
+      Highest = (Sim2Curr-i)->High;
     }
-    if( (Sim2Curr-i)->End < Lowest )
+    if( (Sim2Curr-i)->Low < Lowest )
     {
-      Lowest = (Sim2Curr-i)->End;
+      Lowest = (Sim2Curr-i)->Low;
     }
   }
-
-  RSV = (float)(NewPrice - Lowest) / (float)(Highest - Lowest);
-
-  K   = LAST_KDJ("K") * 3 /2;
+ 
+  RSV = (NewPrice - Lowest) / (Highest - Lowest) * 100;
+  //printf("LAST_KDJ(K) = %f, LAST_KDJ(D) = %f, RSV = %f ,after  Highest = %f ,Lowest = %f \n",LAST_KDJ("K"),LAST_KDJ("D"),RSV,Highest,Lowest);
+  K   = LAST_KDJ("K") * 2 / 3;
   K  += RSV / 3;
-  D   = LAST_KDJ("D") * 3 /2;
-  D  += K;
+  D   = LAST_KDJ("D") * 2 / 3;
+  D  += K / 3;
   J   = 3 * K - 2 * D;
 
   if(!strcmp("K",Type))
@@ -137,7 +220,7 @@ float KDJ(char* Type)
   return 0;
 }
 
-float LAST_RSI(char* Type, ...)
+float LAST_RSI(char* Type)
 {
   if(!strcmp("6",Type))
   {
@@ -209,7 +292,7 @@ float RSI(char* Type)
   return 0;
 }
 
-float LAST_MACD(char* Type, ...)
+float LAST_MACD(char* Type)
 {
 
   if(!strcmp("DIF",Type))
@@ -246,14 +329,14 @@ float LAST_MACD(char* Type, ...)
 
 float MACD(char* Type)
 {
-  int   NewPrice;
+  float   NewPrice;
   float EMA12, EMA26, DIF, MACD9;
 
   NewPrice = PRICE();
   
-  EMA12 = ( LAST_MACD("EMA12") * 11 + (float)NewPrice * 2 ) /13;
-  EMA26 = ( LAST_MACD("EMA26") * 25 + (float)NewPrice * 2 ) /27;
-  DIF   = (EMA12 - EMA26)/100;
+  EMA12 = ( LAST_MACD("EMA12") * 11 + NewPrice * 2 ) /13;
+  EMA26 = ( LAST_MACD("EMA26") * 25 + NewPrice * 2 ) /27;
+  DIF   = EMA12 - EMA26;
   MACD9 = ( LAST_MACD("MACD9") * 8 + DIF * 2 ) /10;
 
   if(!strcmp("DIF",Type))
@@ -286,43 +369,6 @@ float MACD(char* Type)
   //
   printf("Error:MACD");
   return 0;
-}
-
-int LAST_PRICE(char* Type, ...)
-{
-  if(!strcmp("high",Type))
-  {
-    return (Sim2Curr-1)->High;
-  }
-  if(!strcmp("low",Type))
-  {
-    return (Sim2Curr-1)->Low;
-  }
-  if(!strcmp("start",Type))
-  {
-    return (Sim2Curr-1)->Start;
-  }
-  if(!strcmp("end",Type))
-  {
-    return (Sim2Curr-1)->End;
-  }
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:LAST_PRICE");
-  return 0;    
-}
-
-int PRICE()
-{
-  if(OpenOrClose)
-  {
-    return Sim2Curr->End;
-  } else
-  {
-    return Sim2Curr->Start;
-  }
 }
 
 int DIFF_AT(char* Type, int Days)
@@ -568,7 +614,7 @@ int IS_DIFF_NEGATIVE_IN(char* Type, int Days) // days average
       }
     }     
   }
-  
+
   return Condition;
 
   //
@@ -610,11 +656,11 @@ float LAST_MA(char* Type)
 
 float MA (char* Type)
 {
-  int        New5MA;
-  int        New10MA;
-  int        New20MA;
-  int        New60MA;
-  int        NewPrice;
+  float        New5MA;
+  float        New10MA;
+  float        New20MA;
+  float        New60MA;
+  float        NewPrice;
 
   NewPrice = PRICE();
 
@@ -706,7 +752,7 @@ int MA_ORDER(char* Type)
   //New60MA -= (Sim2Curr-60)->End;
   //New60MA  = (New60MA + NewPrice)/60
 
-  if(!strcmp("bull",Type))
+  if(!strcmp("ascend",Type))
   {
     if(New5MA >= New10MA && New10MA >= New20MA)
     {
@@ -716,7 +762,7 @@ int MA_ORDER(char* Type)
       return 0;
     }
   }
-  if(!strcmp("bear",Type) )
+  if(!strcmp("descend",Type) )
   {
     if(New5MA < New10MA && New10MA < New20MA)
     {
@@ -813,6 +859,8 @@ int KDCrossUp()
   OLD_K = LAST_KDJ("K");
   OLD_D = LAST_KDJ("D");
 
+  //printf("\nKDCrossUpCheck(C), NEW K = %1.f, NEW D = %1.f, OLD K = %1.f, OLD D = %1.f\n",NEW_K,NEW_D,OLD_K,OLD_D);
+
   if (OLD_D > OLD_K && NEW_D < NEW_K)
   {
     return 1;
@@ -851,6 +899,26 @@ int KDCrossDown()
   //
   printf("Error:KDCrossDown");
   return 0;   
+}
+
+int KDOverRange(float range)
+{
+  float NEW_K, NEW_D;
+
+  NEW_K = KDJ("K");
+  NEW_D = KDJ("D");
+
+  if (NEW_K > NEW_D)
+  {
+    if ( NEW_K - NEW_D > range)
+      return 1;
+  } else if (NEW_K < NEW_D)
+  {
+    if ( NEW_D - NEW_K > range)
+      return 1;
+  }
+
+  return 0;
 }
 
 int RSICrossUp()
@@ -948,18 +1016,22 @@ int OSCCrossDown ()
 
 void AtOpen()
 {
-  if( CrossUpMA("5") && MA_ORDER("bull") && KDCrossUp() )
+  //if( CrossDownMA("5") && MA_ORDER("descend") )
+  if ( KDCrossDown() )
   {
-    Buy("Now",1000);
+    Sell("Now",1);
+    printf("Sell(O)\n");
   }
 }
 
 void AtClose()
 {
-  if( CrossDownMA("5") && MA_ORDER("bear") && KDCrossDown() )
+  //if( CrossUpMA("5") && MA_ORDER("ascend") && KDCrossUp())
+  if ( KDCrossUp() )// && KDOverRange(5))
   {
-    Sell("Now",1000);
-  }
+    Buy("Now",1);
+    printf("Buy(C)\n");
+  }  
 }
 
 void TradeRule()
@@ -970,12 +1042,14 @@ void TradeRule()
   AtClose();
 }
 
-void AnalysisProfit2 (TRADE_RECORD2  *TradeRecords2)
+void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
 {
-  int  MoneyIn, MoneyOut;
-  int  BuyCount, SellCount;
-  int  Price,Shares,Counter;
-  int  TotalIn,TotalOut,SharesInTotal,SharesOutTotal;
+  float  MoneyIn, MoneyOut;
+  int    BuyCount, SellCount, Counter;
+  int    Shares,SharesRemaining;
+  float  TotalIn,TotalOut,LastDayPrice,Price;
+  int    SharesInTotal,SharesOutTotal;
+  float  TotalRemainValues;
   float  AvgBuyPrice, AvgSellPrice;
 
   TotalIn   = 0;
@@ -985,6 +1059,8 @@ void AnalysisProfit2 (TRADE_RECORD2  *TradeRecords2)
   SellCount = 0;
   SharesOutTotal = 0;
   SharesInTotal  = 0;
+  AvgBuyPrice    = 0;
+  AvgSellPrice   = 0;
 
   do{
     MoneyIn  = 0;
@@ -993,50 +1069,65 @@ void AnalysisProfit2 (TRADE_RECORD2  *TradeRecords2)
     
     Price    = TradeRecords2->Price;
     Shares   = TradeRecords2->ShareTrades;
-    if(TradeRecords2->BuyOrSell) //sell
-    {
-      MoneyOut       += Price * Shares;
-      SharesOutTotal += Shares;
-      AvgSellPrice   += Price;
-      SellCount  += 1;      
-    } else // buy
+    if(TradeRecords2->BuyOrSell) // buy
     {
       MoneyIn        +=  Price * Shares;
       SharesInTotal  += Shares;
       AvgBuyPrice    += Price;
       BuyCount  += 1;
+      AvgBuyPrice  = AvgBuyPrice  / (float)BuyCount;   
+      TotalIn  += MoneyIn;        
+    } else //sell
+    {
+      MoneyOut       += Price * Shares;
+      SharesOutTotal += Shares;
+      AvgSellPrice   += Price;
+      SellCount  += 1;
+      AvgSellPrice = AvgSellPrice / (float)SellCount;
+      TotalOut += MoneyOut;        
     }
-    TotalIn  += MoneyIn;
-    TotalOut += MoneyOut;
-    AvgBuyPrice  = AvgBuyPrice  / (float)BuyCount;
-    AvgSellPrice = AvgSellPrice / (float)SellCount;
 
     printf("TradeRecords(%d)--%d/%d/%d--\n",Counter+1,TradeRecords2->Dates.Years,TradeRecords2->Dates.Months,TradeRecords2->Dates.Days);
     printf("Action: ");
 
     if(TradeRecords2->BuyOrSell)
-      printf("Out ,");
-    else
       printf("In ,");
+    else
+      printf("Out ,");
 
-    printf("Shares = %d, Price = %d, Total Price = %d \n",Shares,Price,Shares*Price);
+    printf("Shares = %d, Price = %.1f, Total Price = %.1f, Shares Remaining = %d \n",Shares,Price,Shares*Price,TradeRecords2->SharesRemaining);
     printf("===============================================\n");
 
-    Counter += 1;	 
+    Counter += 1;
+    if(TradeRecords2->Next == NULL)
+    {
+      SharesRemaining = TradeRecords2->SharesRemaining;
+      LastDayPrice    = Sim2Curr->End;
+    }
     TradeRecords2 = TradeRecords2->Next;
+
   } while(TradeRecords2 != NULL);
 
-  printf("\nTotal Earned = %d, Buy/Sell/Total Count = %d/%d/%d, Average Buy/Sell Price = %1.f/%1.f", TotalOut - TotalIn,BuyCount,SellCount,Counter,AvgBuyPrice,AvgSellPrice);
+  TotalRemainValues = (TotalOut - TotalIn) + (LastDayPrice*SharesRemaining);
+
+  printf("Last Day Price = %.1f, Shares Remaining = %d, Remaining Shares Values = %.1f\n",LastDayPrice, SharesRemaining, LastDayPrice*SharesRemaining);
+  printf("Input Money= %.1f, Output Money = %.1f, Buy/Sell/Total Count = %d/%d/%d, Average Buy/Sell Price(per shares treade) = %1.f, %1.f\n", TotalIn, TotalOut ,BuyCount,SellCount,Counter,AvgBuyPrice,AvgSellPrice);
+  printf("Total Remain (Out - In)+Remaining Shares Values = %.1f\n", TotalRemainValues );
+  printf("Returns(Total Remain)/Input = %.1f%%\n", ((float)TotalRemainValues / (float) TotalIn )*100 );
 }
 
-void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecordsHead)
+void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecords2Head)
 {
   int         Current;
 
   for(Current = StartDayIndex; Current <= EndDayIndex; Current++)
   {
     Sim2Curr = InfoBuffer + Current -1; /* Move day pointer to next day */
+    printf("Day(%d) %d/%d/%d  \n",Sim2Curr->DayIndex,Sim2Curr->Dates.Years,Sim2Curr->Dates.Months,Sim2Curr->Dates.Days);
     TradeRule();
+    printf("End of Day\n");
   }
+
+  *ReturnRecords2Head = Record2Head;
 }
 

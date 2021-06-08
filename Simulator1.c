@@ -1,9 +1,9 @@
 #include "DataDefine.h"
 
-void FindBuyPoint (int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *BuyPrice);
-void FindSellPoint (int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayIndex, int *SellPrice);
+void FindBuyPoint (int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,float *BuyPrice);
+void FindSellPoint (int BuyDayIndex, int EndDayIndex, float BuyPrice, int *SellDayIndex, float *SellPrice);
 
-void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *BuyPrice)
+void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,float *BuyPrice)
 {
   //
   // Find buying point
@@ -12,11 +12,11 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
   DAILY_INFO *Daily;     
   DAILY_INFO *LastDay;
   DAILY_INFO *Last2Day;
-  int        NewPriceS;
-  int        NewPriceE;  
-  int        New5MA;
-  int        New10MA;
-  int        New20MA;  
+  float        NewPriceS;
+  float        NewPriceE;  
+  float        New5MA;
+  float        New10MA;
+  float        New20MA;  
   char       MA_checkS = 0;
   char       MA_checkE = 0;  
   char       LD_check  = 0;
@@ -30,7 +30,7 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
   {
     LastDay =  Daily-1;
     Last2Day = LastDay-1;
-    printf("SearchBuy-%d/%d/%d LastDay(%d),LD2(%d),CurrInd = %d,%d,%d\n",Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,LastDay->DayIndex,Last2Day->DayIndex, LastDay->Start, Last2Day->Start, CurrentIndex);
+    printf("SearchBuy-%d/%d/%d LastDay(%d),LD2(%d),CurrInd = %.1f,%.1f,%d\n",Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,LastDay->DayIndex,Last2Day->DayIndex, LastDay->Start, Last2Day->Start, CurrentIndex);
 
     //
     // Check MA Start
@@ -42,7 +42,7 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
 	  //printf("Price(S) = %d, New5MA = %d, New10MA = %d, New20MA = %d\n",NewPriceS,New5MA,New10MA,New20MA);
     if(NewPriceS > New5MA && New5MA >= New10MA && New10MA >= New20MA)
     {
-	  Percent = ((float)New5MA/(float)New10MA)*100;
+	  Percent = (New5MA/New10MA)*100;
       if (Percent >= MA5_OVER_MA10) //MA5 should over MA10 101%
       {
         MA_checkS = 1;
@@ -59,7 +59,7 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
   	//printf("Price(E) = %d, New5MA = %d, New10MA = %d, New20MA = %d\n",NewPriceE,New5MA,New10MA,New20MA);	
     if(NewPriceE > New5MA && New5MA >= New10MA && New10MA >= New20MA)
     {
-	  Percent = ((float)New5MA/(float)New10MA)*100;	
+	  Percent = (New5MA/New10MA)*100;	
       if( Percent >= MA5_OVER_MA10) //MA5 should over MA10 101%
       {
         MA_checkE = 1;
@@ -117,7 +117,7 @@ void FindBuyPoint(int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,int *Buy
   DEBUG("FindBuyPoint End\n");  
 }
 
-void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayIndex, int *SellPrice)
+void FindSellPoint(int BuyDayIndex, int EndDayIndex, float BuyPrice, int *SellDayIndex, float *SellPrice)
 {
   //
   // Find Selling point
@@ -146,7 +146,7 @@ void FindSellPoint(int BuyDayIndex, int EndDayIndex, int BuyPrice, int *SellDayI
     LastDay   = Daily-1;
     Last2Day  = LastDay-1;
 
-    printf("SearchSell-%d/%d/%d ,LastDay(%d),LD2(%d),CurrentIndex = %d,%d,%d\n",Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,LastDay->DayIndex,Last2Day->DayIndex, LastDay->Start, Last2Day->Start,CurrentIndex);
+    printf("SearchSell-%d/%d/%d ,LastDay(%d),LD2(%d),CurrentIndex = %.1f,%.1f,%d\n",Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,LastDay->DayIndex,Last2Day->DayIndex, LastDay->Start, Last2Day->Start,CurrentIndex);
 
     NewPriceS = Daily->Start;
 	  New5MA = ((LastDay->MA.MA5)*5 - (Daily-5)->End + NewPriceS)/5;
@@ -300,8 +300,8 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords)
    int   Count;
    int   WinCount;
    int   LoseCount;
-   int   EarnedMoney;
-   int   LoseMoney;
+   float   EarnedMoney;
+   float   LoseMoney;
    float Percent;
    float AverWin;
    float AverLose;   
@@ -323,18 +323,18 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords)
 
        if((TradeRecords->BuyPrice != 0 || TradeRecords->BuyDayIndex != 0) && (TradeRecords->SellPrice != 0 || TradeRecords->SellDayIndex != 0)) /*if buy point and sell point exist*/ 
        {
-         printf("[Buy]: DayIndex:%d, price:%d  ====> [Sell]: DayIndex:%d, price:%d\n", TradeRecords->BuyDayIndex+1, TradeRecords->BuyPrice, TradeRecords->SellDayIndex+1, TradeRecords->SellPrice);
-		 printf("%d/%d/%d-------------------",(Daily+TradeRecords->BuyDayIndex)->Dates.Years,(Daily+TradeRecords->BuyDayIndex)->Dates.Months,(Daily+TradeRecords->BuyDayIndex)->Dates.Days);                    
+         printf("[Buy]: DayIndex:%d, price:%.1f  ====> [Sell]: DayIndex:%d, price:%.1f\n", TradeRecords->BuyDayIndex+1, TradeRecords->BuyPrice, TradeRecords->SellDayIndex+1, TradeRecords->SellPrice);
+		     printf("%d/%d/%d-------------------",(Daily+TradeRecords->BuyDayIndex)->Dates.Years,(Daily+TradeRecords->BuyDayIndex)->Dates.Months,(Daily+TradeRecords->BuyDayIndex)->Dates.Days);                    
          printf("-----------------%d/%d/%d\n",(Daily+TradeRecords->SellDayIndex)->Dates.Years,(Daily+TradeRecords->SellDayIndex)->Dates.Months,(Daily+TradeRecords->SellDayIndex)->Dates.Days);
-		 if(TradeRecords->BuyPrice <= TradeRecords->SellPrice)
+		     if(TradeRecords->BuyPrice <= TradeRecords->SellPrice)
          {
            EarnedMoney += (TradeRecords->SellPrice - TradeRecords->BuyPrice);
-           printf("EarnedMoney = %d\n", TradeRecords->SellPrice - TradeRecords->BuyPrice);
-		   WinCount++;
+           printf("EarnedMoney = %.1f\n", TradeRecords->SellPrice - TradeRecords->BuyPrice);
+		       WinCount++;
          } else {
            LoseMoney += (TradeRecords->BuyPrice - TradeRecords->SellPrice);
-           printf("LoseMoney = %d\n",TradeRecords->BuyPrice - TradeRecords->SellPrice);
-		   LoseCount++;   
+           printf("LoseMoney = %.1f\n",TradeRecords->BuyPrice - TradeRecords->SellPrice);
+		       LoseCount++;   
          }
          Count++;
        }
@@ -345,7 +345,7 @@ void AnalysisProfit (TRADE_RECORD  *TradeRecords)
   Percent = (float)WinCount/(float)Count;
   AverWin  = (float)EarnedMoney/(float)WinCount;
   AverLose = (float)LoseMoney/(float)LoseCount;
-  printf("\nTotal Earned = %d, Average Win/Lose money per trade = %.1f/%.1f \n",EarnedMoney - LoseMoney, AverWin, AverLose);
+  printf("\nTotal Earned = %.1f, Average Win/Lose money per trade = %.1f/%.1f \n",EarnedMoney - LoseMoney, AverWin, AverLose);
   printf("Win/Lose/Total = %d/%d/%d , %.1f %%Chance to Wins\n", WinCount, LoseCount, Count, Percent*100);
   printf("===============================================\n");    
   DEBUG("AnalysisProfit End\n");    
@@ -355,9 +355,9 @@ void StockSimulator1(int StartDayIndex, int EndDayIndex, TRADE_RECORD  **ReturnR
 {
   int       StartDayIndex1;
   int       BuyDayIndex;
-  int       BuyPrice;
+  float     BuyPrice;
   int       SellDayIndex;
-  int       SellPrice;
+  float     SellPrice;
   int       Count;
   TRADE_RECORD  *OldRecords;
   TRADE_RECORD  *NewRecords; 
