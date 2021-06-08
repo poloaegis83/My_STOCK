@@ -54,6 +54,7 @@ void BuyOrSell(char Options, char *Type, int Shares)
   if(!strcmp("Now",Type))
   {
     Price    = PRICE();
+    printf("price = %f\n",Price);
     DayIndex = Sim2Curr->DayIndex;
     Dates    = Sim2Curr->Dates;    
   }
@@ -75,9 +76,9 @@ void BuyOrSell(char Options, char *Type, int Shares)
     if(Options) //Block sell with no shares remain
     {
       Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
-      Record->Price = Price;
-      Record->Price = DayIndex;
-      Record->Dates = Dates; 
+      Record->Price    = Price;
+      Record->DayIndex = DayIndex;
+      Record->Dates     = Dates; 
 
       Record->BuyOrSell = 1;
       Record->ShareTrades = Shares;  
@@ -100,9 +101,9 @@ void BuyOrSell(char Options, char *Type, int Shares)
 
   Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
 
-  Record->Price = Price;
-  Record->Price = DayIndex;
-  Record->Dates = Dates; 
+  Record->Price    = Price;
+  Record->DayIndex = DayIndex;
+  Record->Dates    = Dates; 
 
   Record->BuyOrSell = Options ? 1 : 0;
   Record->ShareTrades = Shares;
@@ -901,7 +902,7 @@ int KDCrossDown()
   return 0;   
 }
 
-int KDOverRange(float range)
+int K_D_DiffOver(float range)
 {
   float NEW_K, NEW_D;
 
@@ -919,6 +920,24 @@ int KDOverRange(float range)
   }
 
   return 0;
+}
+
+int KDKeepOverIn(int Days)
+{
+  float K, D;
+  int i,Condition;
+  
+  Condition = 1;
+
+  for(int i = 1; i <= Days; i++)
+  {
+    if( (Sim2Curr-i)->KDJ.K < (Sim2Curr-i)->KDJ.D )
+    {
+      Condition = 0;
+    }
+  }
+
+  return Condition;
 }
 
 int RSICrossUp()
@@ -1027,7 +1046,7 @@ void AtOpen()
 void AtClose()
 {
   //if( CrossUpMA("5") && MA_ORDER("ascend") && KDCrossUp())
-  if ( KDCrossUp() )// && KDOverRange(5))
+  if ( K_D_DiffOver(10) &&  KDKeepOverIn(2) )
   {
     Buy("Now",1);
     printf("Buy(C)\n");
