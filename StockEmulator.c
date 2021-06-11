@@ -132,7 +132,7 @@ void PrintInfo(days)
     printf("DayIndex(%d)   %d/%d/%d            = %d\n",Daily->StockID,Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,Daily->DayIndex);
     printf("Start,High,Low,End                      = %.1f,%.1f,%.1f,%.1f\n",Daily->Start,Daily->High,Daily->Low,Daily->End);
     printf("Diff Leader,Foreign,Investment,Dealers  = %d,%d,%d,%d\n",Daily->LeaderDiff,Daily->ForeignInvestorsDiff,Daily->InvestmentTrustDiff,Daily->DealersDiff);
-    printf("MA5,10,20,60                            = %.1f,%.1f,%.1f,%.1f\n",Daily->MA.MA5,Daily->MA.MA10,Daily->MA.MA20,Daily->MA.MA60);
+    printf("MA5,10,20,60                            = %.f,%.1f,%.1f,%.1f\n",Daily->MA.MA5,Daily->MA.MA10,Daily->MA.MA20,Daily->MA.MA60);
     printf("K,D,J                                   = %.1f, %.1f, %.1f\n",Daily->KDJ.K, Daily->KDJ.D, Daily->KDJ.J);
     printf("RSI(6),RSI(12)                          = %.1f, %.1f\n",Daily->RSI.RSI_6,Daily->RSI.RSI_12);	
     printf("DIF,EMA12,EMA26,MACD9,OSC               = %.1f, %.1f, %.1f, %.1f, %.1f\n",Daily->MACD.DIF,Daily->MACD.EMA12,Daily->MACD.EMA26,Daily->MACD.MACD9,Daily->MACD.OSC);	 
@@ -191,7 +191,7 @@ void InitStockDailyInfoData(FILE *fp , int days)
   
   CalculateMACD (days);
 
-  //PrintInfo(days);
+  PrintInfo(days);
   
   DEBUG("InitStockDailyInfoData End\n");   
 }
@@ -201,11 +201,11 @@ void CalculateMA(int days)
   //
   // Calculate MA data write into DAILY_INFO.
   //
-  int         Price5;
-  int         Price10;
-  int         Price20;
-  int         Price60;
-  int         Price120;   
+  float         Price5;
+  float         Price10;
+  float         Price20;
+  float         Price60;
+  float         Price120;   
   int         MAIndex;
   int         DailyCounter;
   DAILY_INFO  *Daily;

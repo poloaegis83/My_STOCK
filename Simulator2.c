@@ -1,5 +1,8 @@
 #include "DataDefine.h"
 
+#define MOVE_TO_X_DAYS_AGO(x)     Sim2Curr-=x;
+#define MOVE_TO_X_DAYS_FORWORD(x) Sim2Curr+=x;
+
 char           OpenOrClose;
 DAILY_INFO     *Sim2Curr;
 TRADE_RECORD2  *Record2Head = NULL;
@@ -18,23 +21,23 @@ float PRICE()
   }
 }
 
-float LAST_PRICE(char* Type)
+float LAST_PRICE(char* Type,int Days)
 {
   if(!strcmp("high",Type))
   {
-    return (Sim2Curr-1)->High;
+    return (Sim2Curr-Days)->High;
   }
   if(!strcmp("low",Type))
   {
-    return (Sim2Curr-1)->Low;
+    return (Sim2Curr-Days)->Low;
   }
   if(!strcmp("start",Type))
   {
-    return (Sim2Curr-1)->Start;
+    return (Sim2Curr-Days)->Start;
   }
   if(!strcmp("end",Type))
   {
-    return (Sim2Curr-1)->End;
+    return (Sim2Curr-Days)->End;
   }
 
   //
@@ -132,19 +135,61 @@ void Sell(char *Type, int Shares)
   BuyOrSell(0,Type,Shares);
 }
 
-float LAST_KDJ(char* Type)
+float LAST_MA(char* Type, int Days)
 {
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  if(!strcmp("5",Type))
+  {
+    return (Sim2Curr-Days)->MA.MA5;
+  }
+  if(!strcmp("10",Type))
+  {
+    return (Sim2Curr-Days)->MA.MA10;
+  }
+  if(!strcmp("20",Type))
+  {
+    return (Sim2Curr-Days)->MA.MA20;
+  }
+  if(!strcmp("60",Type))
+  {
+    return (Sim2Curr-Days)->MA.MA60;
+  }
+  if(!strcmp("120",Type))
+  {
+    return (Sim2Curr-Days)->MA.MA120;
+  }
+
+  //
+  // Should not reach here!
+  //
+  printf("Error:LAST_MA");
+  return 0;    
+}
+
+float LAST_KDJ(char* Type,int Days)
+{
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+  
   if(!strcmp("K",Type))
   {
-    return (Sim2Curr-1)->KDJ.K;
+    return (Sim2Curr-Days)->KDJ.K;
   }
   if(!strcmp("D",Type))
   {
-    return (Sim2Curr-1)->KDJ.D;
+    return (Sim2Curr-Days)->KDJ.D;
   }
   if(!strcmp("J",Type))
   {
-    return (Sim2Curr-1)->KDJ.J;
+    return (Sim2Curr-Days)->KDJ.J;
   }
 
   //
@@ -154,82 +199,21 @@ float LAST_KDJ(char* Type)
   return 0;  
 }
 
-float KDJ(char* Type)
+float LAST_RSI(char* Type,int Days)
 {
-  float      NewPrice;
-  float      Highest,Lowest;
-  int        i,RSV_n;
-  float      RSV,K,D,J;
-  //
-  // Re-calculator KDJ(9)
-  //
-  RSV_n = 9;
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
 
-  NewPrice = PRICE();
-
-  //
-  // Find Highest and Lowest in last 9 days
-  //
-  if(OpenOrClose)
-  {
-    Highest = Sim2Curr->High;
-    Lowest  = Sim2Curr->Low;
-  }
-  else
-  {
-    Highest = NewPrice;
-    Lowest  = NewPrice;
-  }
-  //printf("before Highest = %f ,Lowest = %f \n",Highest,Lowest);
-
-  for (i = 1; i < RSV_n; i++)
-  {
-    if( (Sim2Curr-i)->High > Highest)
-    {
-      Highest = (Sim2Curr-i)->High;
-    }
-    if( (Sim2Curr-i)->Low < Lowest )
-    {
-      Lowest = (Sim2Curr-i)->Low;
-    }
-  }
- 
-  RSV = (NewPrice - Lowest) / (Highest - Lowest) * 100;
-  //printf("LAST_KDJ(K) = %f, LAST_KDJ(D) = %f, RSV = %f ,after  Highest = %f ,Lowest = %f \n",LAST_KDJ("K"),LAST_KDJ("D"),RSV,Highest,Lowest);
-  K   = LAST_KDJ("K") * 2 / 3;
-  K  += RSV / 3;
-  D   = LAST_KDJ("D") * 2 / 3;
-  D  += K / 3;
-  J   = 3 * K - 2 * D;
-
-  if(!strcmp("K",Type))
-  {
-    return K;
-  }
-  if(!strcmp("D",Type))
-  {
-    return D;
-  }
-  if(!strcmp("J",Type))
-  {
-    return J;
-  }
-  //
-  // Should not reach here!
-  //
-  printf("Error:KDJ");
-  return 0;
-}
-
-float LAST_RSI(char* Type)
-{
   if(!strcmp("6",Type))
   {
-    return (Sim2Curr-1)->RSI.RSI_6;
+    return (Sim2Curr-Days)->RSI.RSI_6;
   }
   if(!strcmp("12",Type))
   {
-    return (Sim2Curr-1)->RSI.RSI_12;
+    return (Sim2Curr-Days)->RSI.RSI_12;
   }
 
   //
@@ -239,86 +223,37 @@ float LAST_RSI(char* Type)
   return 0;
 }
 
-float RSI(char* Type)
+float LAST_MACD(char* Type,int Days)
 {
-  int     NewPrice, LastPrice;
-  float   Upt, Dnt;
-  float   RSI6, RSI12;
-
-  //
-  // Re-calculator RSI6, RSI12
-  //  
-  NewPrice = PRICE();
-  LastPrice = LAST_PRICE("end");
-
-  if(NewPrice > LastPrice)
+  if (Days <= 0)
   {
-    Upt = (Sim2Curr-1)->RSI.Up6 * 5  + NewPrice - LastPrice;
-    Dnt = (Sim2Curr-1)->RSI.Down6 * 5 + 0;
-  } else
-  {
-    Upt = (Sim2Curr-1)->RSI.Up6 * 5 + 0;
-    Dnt = (Sim2Curr-1)->RSI.Down6 *5 + LastPrice - NewPrice ;
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
   }
-  Upt = Upt/6;
-  Dnt = Dnt/6;
-  RSI6 = ( Upt / (Upt+Dnt) )*100;
-
-  if(NewPrice > LastPrice)
-  {
-    Upt = (Sim2Curr-1)->RSI.Up12 * 11  + NewPrice - LastPrice;
-    Dnt = (Sim2Curr-1)->RSI.Down12 * 11 + 0;
-  } else
-  {
-    Upt = (Sim2Curr-1)->RSI.Up12 * 11 + 0;
-    Dnt = (Sim2Curr-1)->RSI.Down12 * 11 + LastPrice - NewPrice ;
-  }
-  Upt = Upt/12;
-  Dnt = Dnt/12;
-  RSI12 = ( Upt / (Upt+Dnt) )*100;
-
-  if(!strcmp("6",Type))
-  {
-    return RSI6;
-  }
-  if(!strcmp("12",Type))
-  {
-    return RSI12;
-  }
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:RSI");
-  return 0;
-}
-
-float LAST_MACD(char* Type)
-{
 
   if(!strcmp("DIF",Type))
   {
-    return (Sim2Curr-1)->MACD.DIF;
+    return (Sim2Curr-Days)->MACD.DIF;
   }
 
   if(!strcmp("EMA12",Type))
   {
-    return (Sim2Curr-1)->MACD.EMA12;
+    return (Sim2Curr-Days)->MACD.EMA12;
   }
 
   if(!strcmp("EMA26",Type))
   {
-    return (Sim2Curr-1)->MACD.EMA26;
+    return (Sim2Curr-Days)->MACD.EMA26;
   }
 
   if(!strcmp("MACD9",Type))
   {
-    return (Sim2Curr-1)->MACD.MACD9;
+    return (Sim2Curr-Days)->MACD.MACD9;
   }
 
   if(!strcmp("OSC",Type))
   {
-    return (Sim2Curr-1)->MACD.OSC;
+    return (Sim2Curr-Days)->MACD.OSC;
   }  
 
   //
@@ -328,51 +263,7 @@ float LAST_MACD(char* Type)
   return 0;
 }
 
-float MACD(char* Type)
-{
-  float   NewPrice;
-  float EMA12, EMA26, DIF, MACD9;
-
-  NewPrice = PRICE();
-  
-  EMA12 = ( LAST_MACD("EMA12") * 11 + NewPrice * 2 ) /13;
-  EMA26 = ( LAST_MACD("EMA26") * 25 + NewPrice * 2 ) /27;
-  DIF   = EMA12 - EMA26;
-  MACD9 = ( LAST_MACD("MACD9") * 8 + DIF * 2 ) /10;
-
-  if(!strcmp("DIF",Type))
-  {
-    return DIF;
-  }
-
-  if(!strcmp("EMA12",Type))
-  {
-    return EMA12;
-  }
-
-  if(!strcmp("EMA26",Type))
-  {
-    return EMA26;
-  }
-
-  if(!strcmp("MACD9",Type))
-  {
-    return MACD9;
-  }
-
-  if(!strcmp("OSC",Type))
-  {
-    return DIF - MACD9;
-  }  
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:MACD");
-  return 0;
-}
-
-int DIFF_AT(char* Type, int Days)
+int LAST_DIFF(char* Type, int Days)
 {
   if (Days <= 0)
   {
@@ -401,258 +292,6 @@ int DIFF_AT(char* Type, int Days)
   //
   printf("Error:DIFFERENCE");
   return 0;  
-}
-
-int DIFF_TOTAL_IN(char* Type, int Days) // Total in x days
-{
-  int Total, i;
-
-  if (Days <= 0)
-  {
-    printf("Error:DIFFERENCE Days Should > 0\n");
-    return 0;
-  }
-
-  Total = 0;
-
-  if (!strcmp("leader",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      Total += DIFF_AT("leader", i);
-    }    
-  }
-  if(!strcmp("foreign",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      Total += DIFF_AT("foreign", i);
-    }    
-  }
-  if(!strcmp("investment",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      Total += DIFF_AT("investment", i);
-    }    
-  }
-  if(!strcmp("dealers",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      Total += DIFF_AT("dealers", i);
-    }    
-  }
-  return Total;
-  //
-  // Should not reach here!
-  //
-  printf("Error:DIFFERENCE");
-  //return 0;  
-}
-
-int DIFF_AVG_IN(char* Type, int Days) // Total in x days
-{
-  int Total, i;
-
-  if (Days <= 0)
-  {
-    printf("Error:DIFFERENCE Days Should > 0\n");
-    return 0;
-  }
-
-  Total = 0;
-
-  if (!strcmp("leader",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      Total += DIFF_AT("leader", i);
-    }    
-  }
-  if(!strcmp("foreign",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      Total += DIFF_AT("foreign", i);
-    }    
-  }
-  if(!strcmp("investment",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      Total += DIFF_AT("investment", i);
-    }    
-  }
-  if(!strcmp("dealers",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      Total += DIFF_AT("dealers", i);
-    }    
-  }
-  return Total / Days;
-  //
-  // Should not reach here!
-  //
-  printf("Error:DIFFERENCE");
-  //return 0;  
-}
-
-int IS_DIFF_POSTIVE_IN(char* Type, int Days) // days average
-{
-  char Condition;
-  int  i;
-
-  if (Days <= 0)
-  {
-    printf("Error:DIFFERENCE Days Should > 0\n");
-    return 0;
-  }
-
-  Condition = 1;
-
-  if (!strcmp("leader",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      if(DIFF_AT("leader", i) < 0)
-      {
-        Condition = 0;
-      }
-    }    
-  }
-  if(!strcmp("foreign",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      if(DIFF_AT("foreign", i) < 0)
-      {
-        Condition = 0;
-      }
-    }     
-  }
-  if(!strcmp("investment",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      if(DIFF_AT("investment", i) < 0)
-      {
-        Condition = 0;
-      }
-    }    
-  }
-  if(!strcmp("dealers",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      if(DIFF_AT("dealers", i) < 0)
-      {
-        Condition = 0;
-      }
-    }     
-  }
-  
-  return Condition;
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:DIFFERENCE");
-  //return 0;  
-}
-
-int IS_DIFF_NEGATIVE_IN(char* Type, int Days) // days average
-{
-  char Condition;
-  int  i;
-
-  if (Days <= 0)
-  {
-    printf("Error:DIFFERENCE Days Should > 0\n");
-    return 0;
-  }
-
-  Condition = 1;
-
-  if (!strcmp("leader",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      if(DIFF_AT("leader", i) > 0)
-      {
-        Condition = 0;
-      }
-    }    
-  }
-  if(!strcmp("foreign",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      if(DIFF_AT("foreign", i) > 0)
-      {
-        Condition = 0;
-      }
-    }     
-  }
-  if(!strcmp("investment",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      if(DIFF_AT("investment", i) > 0)
-      {
-        Condition = 0;
-      }
-    }    
-  }
-  if(!strcmp("dealers",Type))
-  {
-    for ( i = 1; i <= Days; i++)
-    {
-      if(DIFF_AT("dealers", i) > 0)
-      {
-        Condition = 0;
-      }
-    }     
-  }
-
-  return Condition;
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:DIFFERENCE");
-  //return 0;  
-}
-
-float LAST_MA(char* Type)
-{
-  if(!strcmp("5",Type))
-  {
-    return (Sim2Curr-1)->MA.MA5;
-  }
-  if(!strcmp("10",Type))
-  {
-    return (Sim2Curr-1)->MA.MA10;
-  }
-  if(!strcmp("20",Type))
-  {
-    return (Sim2Curr-1)->MA.MA20;
-  }
-  if(!strcmp("60",Type))
-  {
-    return (Sim2Curr-1)->MA.MA60;
-  }
-  if(!strcmp("120",Type))
-  {
-    return (Sim2Curr-1)->MA.MA120;
-  }
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:LAST_MA");
-  return 0;    
 }
 
 float MA (char* Type)
@@ -705,37 +344,520 @@ float MA (char* Type)
   return 0;   
 }
 
-int LAST_MA_ORDER(char* Type)
+float KDJ(char* Type)
 {
-  if(!strcmp("bull",Type))
+  float      NewPrice;
+  float      Highest,Lowest;
+  int        i,RSV_n;
+  float      RSV,K,D,J;
+  //
+  // Re-calculator KDJ(9)
+  //
+  RSV_n = 9;
+
+  NewPrice = PRICE();
+
+  //
+  // Find Highest and Lowest in last 9 days
+  //
+  if(OpenOrClose)
   {
-    if((Sim2Curr-1)->MA.MA5 >= (Sim2Curr-1)->MA.MA10 && (Sim2Curr-1)->MA.MA10 >= (Sim2Curr-1)->MA.MA20)
+    Highest = Sim2Curr->High;
+    Lowest  = Sim2Curr->Low;
+  }
+  else
+  {
+    Highest = NewPrice;
+    Lowest  = NewPrice;
+  }
+  //printf("before Highest = %f ,Lowest = %f \n",Highest,Lowest);
+
+  for (i = 1; i < RSV_n; i++)
+  {
+    if (LAST_PRICE("high",i) > Highest) //( (Sim2Curr-i)->High > Highest)
     {
-      return 1;
-    } else 
+      Highest = LAST_PRICE("high",i); //(Sim2Curr-i)->High;
+    }
+    if( LAST_PRICE("low",i) < Lowest ) //(Sim2Curr-i)->Low < Lowest )
     {
-      return 0;
+      Lowest = LAST_PRICE("low",i); //(Sim2Curr-i)->Low;
     }
   }
-  if(!strcmp("bear",Type))
+ 
+  RSV = (NewPrice - Lowest) / (Highest - Lowest) * 100;
+  //printf("LAST_KDJ(K) = %f, LAST_KDJ(D) = %f, RSV = %f ,after  Highest = %f ,Lowest = %f \n",LAST_KDJ("K"),LAST_KDJ("D"),RSV,Highest,Lowest);
+  K   = LAST_KDJ("K",1) * 2 / 3;
+  K  += RSV / 3;
+  D   = LAST_KDJ("D",1) * 2 / 3;
+  D  += K / 3;
+  J   = 3 * K - 2 * D;
+
+  if(!strcmp("K",Type))
   {
-    if((Sim2Curr-1)->MA.MA5 < (Sim2Curr-1)->MA.MA10 && (Sim2Curr-1)->MA.MA10 < (Sim2Curr-1)->MA.MA20)
-    {
-      return 1;
-    } else 
-    {
-      return 0;
-    }    
+    return K;
+  }
+  if(!strcmp("D",Type))
+  {
+    return D;
+  }
+  if(!strcmp("J",Type))
+  {
+    return J;
+  }
+  //
+  // Should not reach here!
+  //
+  printf("Error:KDJ");
+  return 0;
+}
+
+float RSI(char* Type)
+{
+  int     NewPrice, LastPrice;
+  float   Upt, Dnt;
+  float   RSI6, RSI12;
+
+  //
+  // Re-calculator RSI6, RSI12
+  //  
+  NewPrice = PRICE();
+  LastPrice = LAST_PRICE("end",1);
+
+  if(NewPrice > LastPrice)
+  {
+    Upt = (Sim2Curr-1)->RSI.Up6 * 5  + NewPrice - LastPrice;
+    Dnt = (Sim2Curr-1)->RSI.Down6 * 5 + 0;
+  } else
+  {
+    Upt = (Sim2Curr-1)->RSI.Up6 * 5 + 0;
+    Dnt = (Sim2Curr-1)->RSI.Down6 *5 + LastPrice - NewPrice ;
+  }
+  Upt = Upt/6;
+  Dnt = Dnt/6;
+  RSI6 = ( Upt / (Upt+Dnt) )*100;
+
+  if(NewPrice > LastPrice)
+  {
+    Upt = (Sim2Curr-1)->RSI.Up12 * 11  + NewPrice - LastPrice;
+    Dnt = (Sim2Curr-1)->RSI.Down12 * 11 + 0;
+  } else
+  {
+    Upt = (Sim2Curr-1)->RSI.Up12 * 11 + 0;
+    Dnt = (Sim2Curr-1)->RSI.Down12 * 11 + LastPrice - NewPrice ;
+  }
+  Upt = Upt/12;
+  Dnt = Dnt/12;
+  RSI12 = ( Upt / (Upt+Dnt) )*100;
+
+  if(!strcmp("6",Type))
+  {
+    return RSI6;
+  }
+  if(!strcmp("12",Type))
+  {
+    return RSI12;
   }
 
   //
   // Should not reach here!
   //
-  printf("Error:LAST_MA_ORDER");
+  printf("Error:RSI");
+  return 0;
+}
+
+float MACD(char* Type)
+{
+  float   NewPrice;
+  float EMA12, EMA26, DIF, MACD9;
+
+  NewPrice = PRICE();
+  
+  EMA12 = ( LAST_MACD("EMA12",1) * 11 + NewPrice * 2 ) /13;
+  EMA26 = ( LAST_MACD("EMA26",1) * 25 + NewPrice * 2 ) /27;
+  DIF   = EMA12 - EMA26;
+  MACD9 = ( LAST_MACD("MACD9",1) * 8 + DIF * 2 ) /10;
+
+  if(!strcmp("DIF",Type))
+  {
+    return DIF;
+  }
+
+  if(!strcmp("EMA12",Type))
+  {
+    return EMA12;
+  }
+
+  if(!strcmp("EMA26",Type))
+  {
+    return EMA26;
+  }
+
+  if(!strcmp("MACD9",Type))
+  {
+    return MACD9;
+  }
+
+  if(!strcmp("OSC",Type))
+  {
+    return DIF - MACD9;
+  }  
+
+  //
+  // Should not reach here!
+  //
+  printf("Error:MACD");
+  return 0;
+}
+
+int PriceCross(char* Type, char options) // 0 = up, 1 = down;
+{
+  float        MA5;
+  float        MA10;
+  float        MA20;
+  float        MA60;  
+  float        New5MA;
+  float        New10MA;
+  float        New20MA;
+  float        New60MA;
+  float        NewPrice, LastPrice;
+  char       Corss5 = 0;
+  char       Corss10 = 0;
+  char       Corss20 = 0;
+  char       Corss60 = 0;  
+
+  NewPrice = PRICE();
+
+  LastPrice = LAST_PRICE("end",1);
+
+  MA5     = LAST_MA("5",1);
+  MA10    = LAST_MA("10",1);
+  MA20    = LAST_MA("20",1);
+  MA60    = LAST_MA("60",1);
+  New5MA  = MA("5");
+  New10MA = MA("10");
+  New20MA = MA("20");
+  New60MA = MA("60");
+
+  if (!options)
+  {
+    if (LastPrice < MA5 && NewPrice >= New5MA)
+      Corss5 = 1;
+    if (LastPrice < MA10 && NewPrice >= New10MA)
+      Corss10 = 1;
+    if (LastPrice < MA20 && NewPrice >= New20MA)
+      Corss20 = 1;
+    if (LastPrice < MA60 && NewPrice >= New60MA)
+      Corss60 = 1;      
+  } else
+  {
+    if (LastPrice >= MA5 && NewPrice < New5MA)
+      Corss5 = 1;
+    if (LastPrice >= MA10 && NewPrice < New10MA)
+      Corss10 = 1;
+    if (LastPrice >= MA20 && NewPrice < New20MA)
+      Corss20 = 1;
+    if (LastPrice >= MA60 && NewPrice < New60MA)
+      Corss60 = 1;         
+  }
+  if(Corss5)
+    printf("  crossed MA5 LP= %f MA5 = %f NP = %f N5MA = %f  ",LastPrice,MA5,NewPrice,New5MA);
+  if(!strcmp(">MA5",Type) || !strcmp("<MA5",Type))
+    return Corss5;
+  if(!strcmp(">MA10",Type) || !strcmp("<MA10",Type))
+    return Corss10;
+  if(!strcmp(">MA20",Type) || !strcmp("<MA20",Type))
+    return Corss20;
+  if(!strcmp(">MA60",Type) || !strcmp("<MA60",Type))
+    return Corss60;  
+
+  //
+  // Should not reach here!
+  //
+  printf("Error:MA_CROSS");
   return 0;   
 }
 
-int MA_ORDER(char* Type)
+int MACross(char* Type)
+{
+  if(!strcmp("MA5>10",Type))
+    if( (Sim2Curr-1)->MA.MA5 < (Sim2Curr-1)->MA.MA10 && (Sim2Curr)->MA.MA5 > (Sim2Curr)->MA.MA10 )
+      return 1;
+  if(!strcmp("MA5>20",Type))
+    if( (Sim2Curr-1)->MA.MA5 < (Sim2Curr-1)->MA.MA20 && (Sim2Curr)->MA.MA5 > (Sim2Curr)->MA.MA20 )
+      return 1;
+  if(!strcmp("MA5>60",Type))
+    if( (Sim2Curr-1)->MA.MA5 < (Sim2Curr-1)->MA.MA60 && (Sim2Curr)->MA.MA5 > (Sim2Curr)->MA.MA60 )
+      return 1;
+
+  if(!strcmp("MA5<10",Type))
+    if( (Sim2Curr-1)->MA.MA5 > (Sim2Curr-1)->MA.MA10 && (Sim2Curr)->MA.MA5 < (Sim2Curr)->MA.MA10 )
+      return 1;
+  if(!strcmp("MA5<20",Type))
+    if( (Sim2Curr-1)->MA.MA5 > (Sim2Curr-1)->MA.MA20 && (Sim2Curr)->MA.MA5 < (Sim2Curr)->MA.MA20 )
+      return 1;
+  if(!strcmp("MA5<60",Type))
+    if( (Sim2Curr-1)->MA.MA5 > (Sim2Curr-1)->MA.MA60 && (Sim2Curr)->MA.MA5 < (Sim2Curr)->MA.MA60 )
+      return 1;
+
+  if(!strcmp("MA10>20",Type))
+    if( (Sim2Curr-1)->MA.MA10 < (Sim2Curr-1)->MA.MA20 && (Sim2Curr)->MA.MA10 > (Sim2Curr)->MA.MA20 )
+      return 1;
+  if(!strcmp("MA10>60",Type))
+    if( (Sim2Curr-1)->MA.MA10 < (Sim2Curr-1)->MA.MA60 && (Sim2Curr)->MA.MA10 > (Sim2Curr)->MA.MA60 )
+      return 1;
+
+  if(!strcmp("MA10<20",Type))
+    if( (Sim2Curr-1)->MA.MA10 > (Sim2Curr-1)->MA.MA20 && (Sim2Curr)->MA.MA10 < (Sim2Curr)->MA.MA20 )
+      return 1;
+  if(!strcmp("MA10<60",Type))
+    if( (Sim2Curr-1)->MA.MA10 > (Sim2Curr-1)->MA.MA60 && (Sim2Curr)->MA.MA10 < (Sim2Curr)->MA.MA60 )
+      return 1;
+
+  if(!strcmp("MA20>60",Type))
+    if( (Sim2Curr-1)->MA.MA20 < (Sim2Curr-1)->MA.MA60 && (Sim2Curr)->MA.MA20 > (Sim2Curr)->MA.MA60 )
+      return 1;
+  if(!strcmp("MA20<60",Type))
+    if( (Sim2Curr-1)->MA.MA20 > (Sim2Curr-1)->MA.MA60 && (Sim2Curr)->MA.MA20 < (Sim2Curr)->MA.MA60 )
+      return 1;
+
+  return 0;    
+}
+
+int KDCross(char *Type)
+{
+  float NEW_K, NEW_D;
+  float OLD_K, OLD_D;
+
+  NEW_K = KDJ("K");
+  NEW_D = KDJ("D");
+  OLD_K = LAST_KDJ("K",1);
+  OLD_D = LAST_KDJ("D",1);
+
+  if(!strcmp("K>D",Type))
+    if (OLD_D > OLD_K && NEW_D < NEW_K)
+      return 1;
+
+  if(!strcmp("K<D",Type))
+    if (OLD_D < OLD_K && NEW_D > NEW_K)
+      return 1;
+
+  return 0;
+ 
+}
+
+int RSICross(char *Type)
+{
+  float NEW_6, NEW_12;
+  float OLD_6, OLD_12;
+
+  NEW_6  = RSI("6");
+  NEW_12 = RSI("12");
+  OLD_6  = LAST_RSI("6",1);
+  OLD_12 = LAST_RSI("12",1);
+
+  if(!strcmp("RSI6>12",Type))
+    if (OLD_12 > OLD_6 && NEW_12 < NEW_6)
+      return 1;
+
+  if(!strcmp("RSI6<12",Type))
+    if (OLD_12 < OLD_6 && NEW_12 > NEW_6)
+      return 1;
+
+  return 0;
+}
+
+int OSCCross(char *Type)
+{
+  float NEW_OSC, OLD_OSC;
+
+  NEW_OSC = MACD("OSC");
+  OLD_OSC = LAST_MACD("OSC",1);
+
+  if(!strcmp("OSC>0",Type))
+    if(OLD_OSC < 0 && NEW_OSC > 0)
+      return 1;
+  if(!strcmp("OSC<0",Type))    
+    if(OLD_OSC > 0 && NEW_OSC < 0)
+      return 1;
+
+  return 0; 
+}
+
+int IsCross(char * Type)
+{
+  if(!strcmp(">MA5",Type) || !strcmp(">MA10",Type) || !strcmp(">MA20",Type) || !strcmp(">MA60",Type) )
+      return PriceCross(Type, 0);
+  else if (!strcmp("<MA5",Type) || !strcmp("<MA10",Type) || !strcmp("<MA20",Type) || !strcmp("<MA60",Type) )
+      return PriceCross(Type, 1);
+
+  if(!strcmp("MA5>10",Type)   || !strcmp("MA5>20",Type)   || !strcmp("MA5>60",Type)   || \
+     !strcmp("MA5<10",Type)   || !strcmp("MA5<20",Type)   || !strcmp("MA5<60",Type)   || \
+     !strcmp("MA10>20",Type)  || !strcmp("MA10>60",Type)  || \
+     !strcmp("MA10<20",Type)  || !strcmp("MA10<60",Type)  || \
+     !strcmp("MA20>60",Type)  || !strcmp("MA20<60",Type)
+  )
+    return MACross(Type);
+
+  if(!strcmp("K>D",Type) || !strcmp("K<D",Type) )
+    return KDCross(Type);
+
+  if(!strcmp("RSI6>12",Type) || !strcmp("RSI6<12",Type))
+    return RSICross(Type);
+
+  if(!strcmp("OSC>0",Type) || !strcmp("OSC<0",Type))
+    return OSCCross(Type);
+
+  //
+  // Should not reach here!
+  //
+  printf("Error:IsCross");
+  return 0; 
+}
+
+int IsKeepOverIn(char * Type, int Days)
+{
+  float NEW_6, NEW_12, NEW_K,NEW_D;
+
+  if(!strcmp("K,D",Type))
+  {
+    NEW_K = KDJ("K");
+    NEW_D = KDJ("D");
+
+    if (NEW_K > NEW_D)
+      if ( NEW_K - NEW_D > Days)
+        return 1;
+    else if (NEW_K < NEW_D)
+      if ( NEW_D - NEW_K > Days)
+        return 1;
+
+    return 0;
+  }
+  if(!strcmp("RSI6,RSI12",Type))
+  {
+    NEW_6  = RSI("6");
+    NEW_12 = RSI("12");
+
+    if (NEW_6 > NEW_12)
+      if ( NEW_6 - NEW_12 > Days)
+        return 1;
+    else if (NEW_6 < NEW_12)
+      if ( NEW_12 - NEW_6 > Days)
+        return 1;
+  }
+
+  //
+  // Should not reach here!
+  //
+  printf("Error:IsDiffOver");
+  return 0;   
+}
+
+int IsDiffPostiveIn(char* Type, int Days)
+{
+  int  i,Condition;
+
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  Condition = 1;
+
+for ( i = 1; i <= Days; i++)
+  if(LAST_DIFF(Type, i) < 0)
+    Condition = 0;
+
+  return Condition;
+}
+
+int IsDiffNegativeIn(char* Type, int Days)
+{
+  int  i,Condition;
+
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  Condition = 1;
+
+  for ( i = 1; i <= Days; i++)
+    if(LAST_DIFF(Type, i) > 0)
+      Condition = 0;
+
+  return Condition;
+}
+
+int DiffTotal(char* Type, int Days) // Total in x days
+{
+  int Total, i;
+
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  Total = 0;
+
+  for ( i = 1; i <= Days; i++)
+    Total += LAST_DIFF(Type, i);
+
+  return Total;
+  //
+  // Should not reach here!
+  //
+  printf("Error:DIFFERENCE");
+  //return 0;  
+}
+
+int DiffAvg(char* Type, int Days) // Total in x days
+{
+  int Total, i;
+
+  if (Days <= 0)
+  {
+    printf("Error:DIFFERENCE Days Should > 0\n");
+    return 0;
+  }
+
+  Total = 0;
+
+  for ( i = 1; i <= Days; i++)
+    Total += LAST_DIFF(Type, i);
+
+  return Total / Days;
+}
+
+int CrossedDays(char * Type)
+{
+  int i,Crossed,Count;
+  
+  Crossed   = 0;
+  Count = 0;
+
+  for(int i = 10; i >= 1; i--)
+  {
+    MOVE_TO_X_DAYS_AGO(i)
+    if(IsCross(Type))
+    {
+      Crossed = 1;
+    }
+    if(IsCross(Type))
+    {
+      Crossed = 0;
+      Count = 0;
+    }
+    MOVE_TO_X_DAYS_FORWORD(i)
+    if(Crossed);
+      Count++;
+  }
+  return Count;
+}
+
+int MAOrder(char* Type)
 {
   int        New5MA;
   int        New10MA;
@@ -748,14 +870,11 @@ int MA_ORDER(char* Type)
   New5MA   = MA("5");
   New10MA  = MA("10");
   New20MA  = MA("20");
- 
-  //New60MA  = (Sim2Curr-1)->MA.MA5 * 60;
-  //New60MA -= (Sim2Curr-60)->End;
-  //New60MA  = (New60MA + NewPrice)/60
+  New60MA  = MA("60");
 
   if(!strcmp("ascend",Type))
   {
-    if(New5MA >= New10MA && New10MA >= New20MA)
+    if(New5MA >= New10MA && New10MA >= New20MA && New20MA >= New60MA)
     {
       return 1;
     } else 
@@ -765,7 +884,7 @@ int MA_ORDER(char* Type)
   }
   if(!strcmp("descend",Type) )
   {
-    if(New5MA < New10MA && New10MA < New20MA)
+    if(New5MA < New10MA && New10MA < New20MA && New20MA < New60MA)
     {
       return 1;
     } else 
@@ -781,276 +900,73 @@ int MA_ORDER(char* Type)
   return 0;   
 }
 
-int IsCrossMA(char* Type, char options) // 0 = up, 1 = down;
-{
-
-  int        MA5;
-  int        MA10;
-  int        MA20;
-  int        MA60;  
-  int        New5MA;
-  int        New10MA;
-  int        New20MA;
-  int        New60MA;
-  int        NewPrice, LastPrice;
-  char       Corss5 = 0;
-  char       Corss10 = 0;
-  char       Corss20 = 0;
-
-  NewPrice = PRICE();
-
-  LastPrice = LAST_PRICE("end");
-
-  MA5     = LAST_MA("5");
-  MA10    = LAST_MA("10");
-  MA20    = LAST_MA("20");
-  New5MA  = MA("5");
-  New10MA = MA("10");
-  New20MA = MA("20");
-
-  if (options)
-  {
-    if (LastPrice < MA5 && NewPrice >= New5MA)
-      Corss5 = 1;
-    if (LastPrice < MA10 && NewPrice >= New10MA)
-      Corss10 = 1;
-    if (LastPrice < MA20 && NewPrice >= New20MA)
-      Corss20 = 1;
-  } else
-  {
-    if (LastPrice >= MA5 && NewPrice < New5MA)
-      Corss5 = 1;
-    if (LastPrice >= MA10 && NewPrice < New10MA)
-      Corss10 = 1;
-    if (LastPrice >= MA20 && NewPrice < New20MA)
-      Corss20 = 1;
-  }
-
-  if(!strcmp("5",Type))
-    return Corss5;
-  if(!strcmp("10",Type))
-    return Corss10;
-  if(!strcmp("20",Type))
-    return Corss20;
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:MA_CROSS");
-  return 0;   
-}
-
-int CrossUpMA (char* Type)
-{
-  return IsCrossMA(Type, 0);
-}
-
-int CrossDownMA (char* Type)
-{
-  return IsCrossMA(Type, 1);
-}
-
-int KDCrossUp()
-{
-  float NEW_K, NEW_D;
-  float OLD_K, OLD_D;
-
-  NEW_K = KDJ("K");
-  NEW_D = KDJ("D");
-  OLD_K = LAST_KDJ("K");
-  OLD_D = LAST_KDJ("D");
-
-  //printf("\nKDCrossUpCheck(C), NEW K = %1.f, NEW D = %1.f, OLD K = %1.f, OLD D = %1.f\n",NEW_K,NEW_D,OLD_K,OLD_D);
-
-  if (OLD_D > OLD_K && NEW_D < NEW_K)
-  {
-    return 1;
-  } else
-  {
-    return 0;
-  }
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:KDCrossUp");
-  return 0;    
-}
-
-int KDCrossDown()
-{
-  float NEW_K, NEW_D;
-  float OLD_K, OLD_D;
-
-  NEW_K = KDJ("K");
-  NEW_D = KDJ("D");
-  OLD_K = LAST_KDJ("K");
-  OLD_D = LAST_KDJ("D");
-
-  if (OLD_K > OLD_D && NEW_K < NEW_D)
-  {
-    return 1;
-  } else
-  {
-    return 0;
-  }
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:KDCrossDown");
-  return 0;   
-}
-
-int K_D_DiffOver(float range)
-{
-  float NEW_K, NEW_D;
-
-  NEW_K = KDJ("K");
-  NEW_D = KDJ("D");
-
-  if (NEW_K > NEW_D)
-  {
-    if ( NEW_K - NEW_D > range)
-      return 1;
-  } else if (NEW_K < NEW_D)
-  {
-    if ( NEW_D - NEW_K > range)
-      return 1;
-  }
-
-  return 0;
-}
-
-int KDKeepOverIn(int Days)
-{
-  float K, D;
-  int i,Condition;
-  
-  Condition = 1;
-
-  for(int i = 1; i <= Days; i++)
-  {
-    if( (Sim2Curr-i)->KDJ.K < (Sim2Curr-i)->KDJ.D )
-    {
-      Condition = 0;
-    }
-  }
-
-  return Condition;
-}
-
-int RSICrossUp()
-{
-  float NEW_6, NEW_12;
-  float OLD_6, OLD_12;
-
-  NEW_6  = RSI("6");
-  NEW_12 = RSI("12");
-  OLD_6  = LAST_RSI("6");
-  OLD_12 = LAST_RSI("12");
-
-  if (OLD_6 < OLD_12 && NEW_6 > NEW_12)
-  {
-    return 1;
-  } else
-  {
-    return 0;
-  }
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:RSICrossUp");
-  return 0;    
-}
-
-int RSICrossDown()
-{
-  float NEW_6, NEW_12;
-  float OLD_6, OLD_12;
-
-  NEW_6  = RSI("6");
-  NEW_12 = RSI("12");
-  OLD_6  = LAST_RSI("6");
-  OLD_12 = LAST_RSI("12");
-
-  if (OLD_6 > OLD_12 && NEW_6 < NEW_12)
-  {
-    return 1;
-  } else
-  {
-    return 0;
-  }
-
-  //
-  // Should not reach here!
-  //
-  printf("Error:RSICrossDown");
-  return 0;    
-}
-
-int OSCCrossUp ()
-{
-  float NEW_OSC, OLD_OSC;
-
-  NEW_OSC = MACD("OSC");
-  OLD_OSC = LAST_MACD("OSC");
-
-  if(OLD_OSC < 0 && NEW_OSC > 0)
-  {
-    return 1;
-  } else 
-  {
-    return 0;
-  }
-  //
-  // Should not reach here!
-  //
-  printf("Error:OSCCrossUp");
-  return 0; 
-}
-
-int OSCCrossDown ()
-{
-
-  float NEW_OSC, OLD_OSC;
-
-  NEW_OSC = MACD("OSC");
-  OLD_OSC = LAST_MACD("OSC");
-
-  if(OLD_OSC > 0 && NEW_OSC < 0)
-  {
-    return 1;
-  } else 
-  {
-    return 0;
-  }
-  //
-  // Should not reach here!
-  //
-  printf("Error:OSCCrossDown");
-  return 0; 
-}
-
 void AtOpen()
 {
-  //if( CrossDownMA("5") && MA_ORDER("descend") )
-  if ( KDCrossDown() )
+/*
+  if( IsCross("MA5>20") && KDJ("K") - KDJ("D") > 0 )//&& CrossedDays("MA5>10") == 2 && MAOrder("ascend") )
+  {
+    Buy("Now",1);
+    printf("Buy(C)\n");
+  }
+
+ if( IsCross("K>D") && KDJ("K") - KDJ("D") > 5 && MAOrder("ascend") )//&& CrossedDays("MA5>10") == 2 && MAOrder("ascend") )
+  {
+    Buy("Now",1);
+    printf("Buy(C)\n");
+  }
+  if(IsCross("<MA5"))
   {
     Sell("Now",1);
     printf("Sell(O)\n");
-  }
+  }   */
 }
 
 void AtClose()
 {
-  //if( CrossUpMA("5") && MA_ORDER("ascend") && KDCrossUp())
-  if ( K_D_DiffOver(10) &&  KDKeepOverIn(2) )
+  
+  if( IsCross("<MA60"))
   {
     Buy("Now",1);
     printf("Buy(C)\n");
-  }  
+  }
+
+  if( IsCross(">MA60") )
+  {
+    Sell("Now",1);
+    printf("Sell(C)\n");
+  }
+
+  //if( CrossUpMA("5") && MA_ORDER("ascend") && KDCrossUp())
+  //if ( CrossAndKeepDays("K>D") == 1 && IsDiffOver("K,D",8) )
+  /*if(IsCross("K>D")&&IsDiffOver("K,D",5) )
+  {
+    Buy("Now",1);
+    printf("Buy(C)\n");
+  }
+  if(IsCross("K<D"))
+  {
+    Sell("Now",1);
+    printf("Sell(O)\n");
+  }*/
+
+  /*if( IsCross("MA5>20") && KDJ("K") - KDJ("D") > 0 )//&& CrossedDays("MA5>10") == 2 && MAOrder("ascend") )
+  {
+    Buy("Now",1);
+    printf("Buy(C)\n");
+  }
+
+
+ if( IsCross("K>D") && KDJ("K") - KDJ("D") > 5 && MAOrder("ascend") )//&& CrossedDays("MA5>10") == 2 && MAOrder("ascend") )
+  {
+    Buy("Now",1);
+    printf("Buy(C)\n");
+  }
+  if(IsCross("<MA5"))
+  {
+    Sell("Now",1);
+    printf("Sell(O)\n");
+  }   */
+
 }
 
 void TradeRule()
