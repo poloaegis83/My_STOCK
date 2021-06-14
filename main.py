@@ -1,6 +1,7 @@
 import requests
 import xml.etree.cElementTree as ET
 import lxml.etree as etree
+from itertools import zip_longest
 from   bs4      import BeautifulSoup
 import time
 import random
@@ -50,6 +51,11 @@ def Get_Data(stock_id,year,month,IsTWSE):
         #print(Soup[i].title)
         Tables[i] = Soup[i].findAll('table')
         tab[i]    = Tables[i][0]
+    
+    no_diff = 0
+    
+    if int(year) >= 2020:
+       no_diff = 1
 
     if IsTWSE == 1:
         tab1 = tab[0].findAll('tr')
@@ -58,12 +64,14 @@ def Get_Data(stock_id,year,month,IsTWSE):
         tab1 = tab[0].findAll('tr')
         tab1 = tab1[2:len(tab1)-1]
 
+    #A special case for 2018 10  (2317)
+
     tab2 = tab[1].findAll('tr')
-    tab2 = tab2[1:]
+    tab2 = tab2[2:]
     tab2.reverse()
 
     tab3 = tab[2].findAll('tr')
-    tab3 = tab3[1:]
+    tab3 = tab3[2:]
     tab3.reverse()
 
     i = 0 # Daily index
@@ -71,6 +79,7 @@ def Get_Data(stock_id,year,month,IsTWSE):
     k = 0 # tab[1] td index
     l = 0 # tab[2] td index
     length = len(tab1)
+    length2 = len(tab2)
 
     # 先嘗試修改函式屬性的值，如果出現AttributeError
     # 表示該屬性不存在，這時候就建立該屬性
@@ -80,10 +89,10 @@ def Get_Data(stock_id,year,month,IsTWSE):
         Get_Data.count = length + 1    # 建立函式的屬性(static variable)
 
     count1 = Get_Data.count - length   # For daily index 屬性累加     
-
+    print("length=",length,"length2 = ",length2)
     global StockData
 
-    for tr1,tr2,tr3 in zip(tab1, tab2, tab3):
+    for tr1 in tab1:
         Daily = ET.Element('Daily')    # 新增 daily element
         StockData.append(Daily)
         Daily.set('Index',str(count1+i))
@@ -103,19 +112,65 @@ def Get_Data(stock_id,year,month,IsTWSE):
             if j % 9 == 6:  # 收盤             
                Price.set('End',(td.getText().rstrip()).replace('.',"") )
             j += 1
-        for td in tr2.findAll('td'):  # 三大法人
-            if k % 4 == 1:  # 投信
-                Difference.set('InvestmentTrustDiff',(td.getText().rstrip()).replace(',',"") )
-            if k % 4 == 2:  # 自營商
-                Difference.set('DealersDiff',(td.getText().rstrip()).replace(',',""))
-            if k % 4 == 3:  # 外資
-                Difference.set('ForeignInvestorsDiff',(td.getText().rstrip()).replace(',',"") )
-            k += 1
-        for td in tr3.findAll('td'): # 主力進出
-            if l % 3 == 2:  # 主力增減
-                Difference.set('LeaderDiff',(td.getText().rstrip()).replace(',',"") )
-            l += 1
         i += 1
+    
+    DiffDay1 = []
+    DiffDay2 = []
+    DiffDataI = []
+    DiffDataD = []
+    DiffDataF = []
+    DiffDataL = []
+    ChYes = 0
+    for tr2 in tab2:  #catch data
+        for td in tr2.findAll('td'):  # 三大法人
+            if k % 4 == 0:
+                DiffDay1.append(td.getText())
+            if k % 4 == 1:  # 投信
+                 #Difference.set('InvestmentTrustDiff',(td.getText().rstrip()).replace(',',"") )
+                DiffDataI.append((td.getText().rstrip()).replace(',',""))
+            if k % 4 == 2:  # 自營商
+                DiffDataD.append((td.getText().rstrip()).replace(',',""))
+            if k % 4 == 3:  # 外資
+                DiffDataF.append((td.getText().rstrip()).replace(',',""))
+            k += 1
+    for tr3 in tab3:  #catch data
+        for td in tr3.findAll('td'): # 主力進出
+            if l % 3 == 0:
+                DiffDay2.append(td.getText())            
+            if l % 3 == 2:  # 主力增減
+                DiffDataL.append((td.getText().rstrip()).replace(',',""))
+                print("++",td.getText())
+            l += 1
+
+    # update to xml
+    count2 = 0
+    count3 = 0
+    for DATA1 in StockData:
+        if count2 >= count1:
+            count3 = 0
+            for DIF in DATA1:
+                if count3 == 1: # Find diff Update
+                    for DiffInd1,DiffInd2,DiffInd3,DiffInd4  in zip(DiffDay1,DiffDataI,DiffDataD,DiffDataF):
+                        if DiffInd1 == str(int(DATA1.get('Years'))-1911)+"/"+DATA1.get('Months')+"/"+DATA1.get('Days'):  #if day match
+                            DIF.set('InvestmentTrustDiff',DiffInd2)
+                            DIF.set('DealersDiff',DiffInd3)
+                            DIF.set('ForeignInvestorsDiff',DiffInd4)                             
+                count3 += 1
+        count2 += 1
+
+    # update to xml
+    count2 = 0
+    count3 = 0
+    for DATA1 in StockData:
+        if count2 >= count1:
+            count3 = 0
+            for DIF in DATA1:
+                if count3 == 1: # Find diff Update
+                    for DiffInd1,DiffInd2  in zip(DiffDay2,DiffDataL):
+                        if DiffInd1 == str(int(DATA1.get('Years'))-1911)+"/"+DATA1.get('Months')+"/"+DATA1.get('Days'):  #if day match
+                            DIF.set('LeaderDiff',DiffInd2)
+                count3 += 1
+        count2 += 1
 
 
 def Is_TWSE_Listed(stock_id):
@@ -130,9 +185,9 @@ def Is_TWSE_Listed(stock_id):
     Soup = BeautifulSoup (res.text, "html.parser")
     Tables = Soup.findAll('table')
     if len(Tables) == 0:
-      return 0            # 上櫃
+        return 0            # 上櫃
     else:
-      return 1            # 上市
+        return 1            # 上市
 
 
 stock_id = input ("請輸入股票代碼: ")
