@@ -8,16 +8,18 @@ DAILY_INFO     *Sim2Curr;
 TRADE_RECORD2  *Record2Head = NULL;
 TRADE_RECORD2  *Record2Current = NULL;
 
+void MA5Cross20Alg();
+
 float PRICE()
 {
   if(OpenOrClose)
   {
     return Sim2Curr->End;
-    printf("PRICE() = %.1f", Sim2Curr->End);
+    //printf("PRICE() = %.1f", Sim2Curr->End);
   } else
   {
     return Sim2Curr->Start;
-    printf("PRICE() = %.1f", Sim2Curr->End);
+    //printf("PRICE() = %.1f", Sim2Curr->End);
   }
 }
 
@@ -98,6 +100,13 @@ void BuyOrSell(char Options, char *Type, int Shares)
     if(Record2Current->SharesRemaining < Shares)
     {
       // Shares remain not enough
+      return;
+    }
+  } else  //Block buy with shares remain
+  {
+    if(Record2Current->SharesRemaining != 0)
+    {
+      // Shares remains
       return;
     }
   }
@@ -923,50 +932,7 @@ void AtOpen()
 
 void AtClose()
 {
-  
-  if( IsCross("<MA60"))
-  {
-    Buy("Now",1);
-    printf("Buy(C)\n");
-  }
-
-  if( IsCross(">MA60") )
-  {
-    Sell("Now",1);
-    printf("Sell(C)\n");
-  }
-
-  //if( CrossUpMA("5") && MA_ORDER("ascend") && KDCrossUp())
-  //if ( CrossAndKeepDays("K>D") == 1 && IsDiffOver("K,D",8) )
-  /*if(IsCross("K>D")&&IsDiffOver("K,D",5) )
-  {
-    Buy("Now",1);
-    printf("Buy(C)\n");
-  }
-  if(IsCross("K<D"))
-  {
-    Sell("Now",1);
-    printf("Sell(O)\n");
-  }*/
-
-  /*if( IsCross("MA5>20") && KDJ("K") - KDJ("D") > 0 )//&& CrossedDays("MA5>10") == 2 && MAOrder("ascend") )
-  {
-    Buy("Now",1);
-    printf("Buy(C)\n");
-  }
-
-
- if( IsCross("K>D") && KDJ("K") - KDJ("D") > 5 && MAOrder("ascend") )//&& CrossedDays("MA5>10") == 2 && MAOrder("ascend") )
-  {
-    Buy("Now",1);
-    printf("Buy(C)\n");
-  }
-  if(IsCross("<MA5"))
-  {
-    Sell("Now",1);
-    printf("Sell(O)\n");
-  }   */
-
+  MA5Cross20Alg();
 }
 
 void TradeRule()
@@ -986,6 +952,10 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   int    SharesInTotal,SharesOutTotal;
   float  TotalRemainValues;
   float  AvgBuyPrice, AvgSellPrice;
+  FILE   *fp;
+  char   *str;
+
+  fp = fopen("result.txt","w");
 
   TotalIn   = 0;
   TotalOut  = 0;
@@ -996,6 +966,7 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   SharesInTotal  = 0;
   AvgBuyPrice    = 0;
   AvgSellPrice   = 0;
+  str = (char*) malloc(50);
 
   do{
     MoneyIn  = 0;
@@ -1020,9 +991,22 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
       TotalOut += MoneyOut;        
     }
 
+    //fwrite(&(TradeRecords2->Dates.Years), sizeof(int), 1, fp);
+    //fwrite(&(TradeRecords2->Dates.Months), sizeof(int), 1, fp);
+    //fwrite(&(TradeRecords2->Dates.Days), sizeof(int), 1, fp);
+    _itoa(TradeRecords2->Dates.Years,str,10);
+    fputs(str,fp);
+    fputs("/",fp);
+    _itoa(TradeRecords2->Dates.Months,str,10);
+    fputs(str,fp);
+    fputs("/",fp);    
+    _itoa(TradeRecords2->Dates.Days,str,10);
+    fputs(str,fp);
+    fputs(",",fp);    
+
     printf("TradeRecords(%d)--%d/%d/%d--\n",Counter+1,TradeRecords2->Dates.Years,TradeRecords2->Dates.Months,TradeRecords2->Dates.Days);
     printf("Action: ");
-
+ 
     if(TradeRecords2->BuyOrSell)
       printf("In ,");
     else
@@ -1049,6 +1033,8 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   printf("Input Money= %.1f, Output Money = %.1f, Buy/Sell/Total Count = %d/%d/%d, Average Buy/Sell Price(per shares treade) = %1.f, %1.f\n", TotalIn, TotalOut ,BuyCount,SellCount,Counter,AvgBuyPrice,AvgSellPrice);
   printf("Total Remain (Out - In)+Remaining Shares Values = %.1f\n", TotalRemainValues );
   printf("Returns(Total Remain)/Input = %.1f%%\n", ((float)TotalRemainValues / (float) TotalIn )*100 );
+
+  fclose(fp);
 }
 
 void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecords2Head)
@@ -1060,9 +1046,21 @@ void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **Return
     Sim2Curr = InfoBuffer + Current -1; /* Move day pointer to next day */
     printf("Day(%d) %d/%d/%d  \n",Sim2Curr->DayIndex,Sim2Curr->Dates.Years,Sim2Curr->Dates.Months,Sim2Curr->Dates.Days);
     TradeRule();
-    printf("End of Day\n");
+    //printf("End of Day\n");
   }
 
   *ReturnRecords2Head = Record2Head;
 }
 
+void MA5Cross20Alg()
+{
+  if(IsCross("MA5>20") && MA("20") > MA("60") )
+  {
+    Buy("Now",1);
+  }
+
+  if(IsCross("MA5<20"))
+  {
+    Sell("Now",1);
+  }  
+}

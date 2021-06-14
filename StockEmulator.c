@@ -39,7 +39,7 @@ void StartElement (void *data, const char *Element, const char **attribute)
 	  Value = attribute[i+1];
 	  if(!strcmp("Index",attribute[i]))
 	  {
-        BuffInitPtr->DayIndex      = (int)atoi(Value);	
+        BuffInitPtr->DayIndex      = (int)atoi(Value);
 	  }
 	  if(!strcmp("Years",attribute[i]))
 	  {
@@ -126,19 +126,20 @@ void PrintInfo(days)
   
   Daily = InfoBuffer;
   
-  printf("\n=============================================\n");
+  printf("\n=================================================\n");
   for(DailyIndex = 0; DailyIndex < days+FIRST_DAILY_DATA_INDEX -1 ; DailyIndex++)
-  {    
-    printf("DayIndex(%d)   %d/%d/%d            = %d\n",Daily->StockID,Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,Daily->DayIndex);
+  {
+    printf("======================For:%d=====================\n\n",DailyIndex);    
+    printf("DayIndex(ID:%d)   %d/%d/%d            = %d\n",Daily->StockID,Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,Daily->DayIndex);
     printf("Start,High,Low,End                      = %.1f,%.1f,%.1f,%.1f\n",Daily->Start,Daily->High,Daily->Low,Daily->End);
     printf("Diff Leader,Foreign,Investment,Dealers  = %d,%d,%d,%d\n",Daily->LeaderDiff,Daily->ForeignInvestorsDiff,Daily->InvestmentTrustDiff,Daily->DealersDiff);
     printf("MA5,10,20,60                            = %.f,%.1f,%.1f,%.1f\n",Daily->MA.MA5,Daily->MA.MA10,Daily->MA.MA20,Daily->MA.MA60);
     printf("K,D,J                                   = %.1f, %.1f, %.1f\n",Daily->KDJ.K, Daily->KDJ.D, Daily->KDJ.J);
     printf("RSI(6),RSI(12)                          = %.1f, %.1f\n",Daily->RSI.RSI_6,Daily->RSI.RSI_12);	
     printf("DIF,EMA12,EMA26,MACD9,OSC               = %.1f, %.1f, %.1f, %.1f, %.1f\n",Daily->MACD.DIF,Daily->MACD.EMA12,Daily->MACD.EMA26,Daily->MACD.MACD9,Daily->MACD.OSC);	 
-    printf("=============================================\n\n");
 	  Daily += 1;
   }
+  printf("\n=================================================\n");
 }
 
 void InitStockDailyInfoData(FILE *fp , int days)
@@ -156,7 +157,6 @@ void InitStockDailyInfoData(FILE *fp , int days)
   BuffInitPtr = InfoBuffer;
 
   GlobalDays = days + FIRST_DAILY_DATA_INDEX - 1;  // Total days needs, prevent init data over the buffer
-
   Parser   = XML_ParserCreate(NULL);
 
   Buff     = XML_GetBuffer(Parser, BUFF_SIZE);               //Allocate buffer
@@ -427,8 +427,8 @@ void CalculateKDJ(int days)
   // Calculate KD data write into DAILY_INFO.
   //
 
-  float         Highest;
-  float         Lowest;
+  float        Highest;
+  float        Lowest;
   int         DailyCounter;
   int         i;
   int         RSV_n;

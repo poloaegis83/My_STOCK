@@ -139,7 +139,6 @@ def Get_Data(stock_id,year,month,IsTWSE):
                 DiffDay2.append(td.getText())            
             if l % 3 == 2:  # 主力增減
                 DiffDataL.append((td.getText().rstrip()).replace(',',""))
-                print("++",td.getText())
             l += 1
 
     # update to xml
@@ -189,12 +188,83 @@ def Is_TWSE_Listed(stock_id):
     else:
         return 1            # 上市
 
+def GetDataByID(stock_id,InputStart,InputEnd):
 
-stock_id = input ("請輸入股票代碼: ")
+    YearStart  = int(InputStart[0:4])
+    MonthStart = int(InputStart[4:6])
+
+    YearEnd    = int(InputEnd[0:4])
+    MonthEnd   = int(InputEnd[4:6])
+
+    YearDiff   = YearEnd - YearStart
+
+    if YearDiff == 0:
+        MonthDiff = MonthEnd - MonthStart
+    elif YearDiff > 0:
+        MonthDiff = ((12 - MonthStart) + MonthEnd) + (YearDiff-1)*12
+    else:
+        BaseException: Error
+
+    StockId = ET.SubElement(StockData, 'StockId')
+    StockId.text = stock_id
+    IsTWSE = Is_TWSE_Listed(stock_id)
+
+    if YearDiff == 0:
+        MonthDiff = MonthEnd - MonthStart
+        for monthI in range(MonthDiff+1):
+            YearData  = str(YearStart)
+            MonthData = str(MonthStart+monthI).rjust(2,'0')
+            print('Y/M',YearData,MonthData)
+            time.sleep(6)
+            Get_Data(stock_id, YearData, MonthData, IsTWSE)        
+    elif YearDiff > 0:
+        MonthDiff = ((12 - MonthStart) + MonthEnd) + (YearDiff-1)*12
+        yearI = 0
+        for monthI in range(MonthDiff+1):
+            YearData  = str(YearStart+yearI)
+            MonthData = str(((MonthStart+monthI)%12)).rjust(2,'0')
+            if MonthData == '00':
+                MonthData = '12'
+                yearI += 1
+            print('Y/M',YearData,MonthData)
+            time.sleep(6)
+            Get_Data(stock_id, YearData, MonthData, IsTWSE)
+    else:
+        BaseException: Error
+
+        # 建立 XML 檔案
+    tree = ET.ElementTree(StockData)
+    tree.write("data"+stock_id+".xml",xml_declaration=True,encoding='UTF-8',method="xml")
+
+        # 讀取 XML 檔案
+    root = etree.parse("data"+stock_id+".xml")
+
+        # 輸出與排版 XML 資料
+    print(etree.tostring(root, pretty_print=True, encoding="unicode"))
+
+        # 將排版的 XML 資料寫入檔案
+    root.write("data"+stock_id+".xml", encoding="utf-8")
+
+
+f = open("IDList.txt", mode='r')
+IDList = []
+while 1:
+    ID = f.read(4)
+    IDList.append(ID)
+    ID = f.read(1)
+    if ID != ",":
+        break
+f.close()
+
+#stock_id = input ("請輸入股票代碼: ")
 
 InputStart = input ("請輸入起始年月 (ex:201911): ")
 InputEnd = input ("請輸入結束年月(ex:202101): ")
 
+for ID_LIST in IDList:
+    GetDataByID(ID_LIST,InputStart,InputEnd)
+
+'''
 YearStart  = int(InputStart[0:4])
 MonthStart = int(InputStart[4:6])
 
@@ -222,7 +292,7 @@ if YearDiff == 0:
         YearData  = str(YearStart)
         MonthData = str(MonthStart+monthI).rjust(2,'0')
         print('Y/M',YearData,MonthData)
-        time.sleep(2)
+        time.sleep(6)
         Get_Data(stock_id, YearData, MonthData, IsTWSE)        
 elif YearDiff > 0:
     MonthDiff = ((12 - MonthStart) + MonthEnd) + (YearDiff-1)*12
@@ -234,11 +304,11 @@ elif YearDiff > 0:
             MonthData = '12'
             yearI += 1
         print('Y/M',YearData,MonthData)
-        time.sleep(2)
+        time.sleep(6)
         Get_Data(stock_id, YearData, MonthData, IsTWSE)
 else:
     BaseException: Error
-
+'''
 ''' debug
 IsTWSE = Is_TWSE_Listed(stock_id)
 Get_Data(stock_id,'2020','01',IsTWSE)
@@ -246,20 +316,20 @@ Get_Data(stock_id,'2020','02',IsTWSE)
 Get_Data(stock_id,'2020','03',IsTWSE)
 Get_Data(stock_id,'2020','04',IsTWSE)
 Get_Data(stock_id,'2020','05',IsTWSE)
-'''
+
     # 建立 XML 檔案
 tree = ET.ElementTree(StockData)
-tree.write("test.xml",xml_declaration=True,encoding='UTF-8',method="xml")
+tree.write("data"+stock_id+".xml",xml_declaration=True,encoding='UTF-8',method="xml")
 
     # 讀取 XML 檔案
-root = etree.parse("test.xml")
+root = etree.parse("data"+stock_id+".xml")
 
     # 輸出與排版 XML 資料
 print(etree.tostring(root, pretty_print=True, encoding="unicode"))
 
     # 將排版的 XML 資料寫入檔案
-root.write("test.xml", encoding="utf-8")
-
+root.write("data"+stock_id+".xml", encoding="utf-8")
+'''
 #ET.dump(StockData)
 
 #os.remove('test.xml')
