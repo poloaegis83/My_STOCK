@@ -2,11 +2,29 @@
 
 #define MOVE_TO_X_DAYS_AGO(x)     Sim2Curr-=x;
 #define MOVE_TO_X_DAYS_FORWORD(x) Sim2Curr+=x;
+#define WriteDates(x,y,z,str,fp)  _itoa(x,str,10);\
+                                  fputs(str,fp);\
+                                  fputs("/",fp);\
+                                  _itoa(y,str,10);\
+                                  fputs(str,fp);\
+                                  fputs("/",fp);\
+                                  _itoa(z,str,10);\
+                                  fputs(str,fp);\
+                                  fputs(",",fp);
+
+#define WriteNum(x,str,fp)        _itoa(x,str,10);\
+                                  fputs(str,fp);\
+                                  fputs(",",fp);
+
+#define WriteFloatNum(x,str,fp)   gcvt(x,6,str);\
+                                  fputs(str,fp);\
+                                  fputs(",",fp);                                  
 
 char           OpenOrClose;
 DAILY_INFO     *Sim2Curr;
 TRADE_RECORD2  *Record2Head = NULL;
 TRADE_RECORD2  *Record2Current = NULL;
+int            gID;
 
 void MA5Cross20Alg();
 
@@ -955,7 +973,7 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   FILE   *fp;
   char   *str;
 
-  fp = fopen("result.txt","w");
+  fp = fopen("result.txt","a");
 
   TotalIn   = 0;
   TotalOut  = 0;
@@ -967,6 +985,9 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   AvgBuyPrice    = 0;
   AvgSellPrice   = 0;
   str = (char*) malloc(50);
+
+  fputs("Start",fp);
+  WriteNum(gID,str,fp)
 
   do{
     MoneyIn  = 0;
@@ -994,26 +1015,25 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
     //fwrite(&(TradeRecords2->Dates.Years), sizeof(int), 1, fp);
     //fwrite(&(TradeRecords2->Dates.Months), sizeof(int), 1, fp);
     //fwrite(&(TradeRecords2->Dates.Days), sizeof(int), 1, fp);
-    _itoa(TradeRecords2->Dates.Years,str,10);
-    fputs(str,fp);
-    fputs("/",fp);
-    _itoa(TradeRecords2->Dates.Months,str,10);
-    fputs(str,fp);
-    fputs("/",fp);    
-    _itoa(TradeRecords2->Dates.Days,str,10);
-    fputs(str,fp);
-    fputs(",",fp);    
+    WriteDates(TradeRecords2->Dates.Years,TradeRecords2->Dates.Months,TradeRecords2->Dates.Days,str,fp)
 
     printf("TradeRecords(%d)--%d/%d/%d--\n",Counter+1,TradeRecords2->Dates.Years,TradeRecords2->Dates.Months,TradeRecords2->Dates.Days);
     printf("Action: ");
  
-    if(TradeRecords2->BuyOrSell)
+    if(TradeRecords2->BuyOrSell){
       printf("In ,");
-    else
+      fputs("In,",fp);
+    } else{
       printf("Out ,");
+      fputs("Out,",fp);
+    }
 
     printf("Shares = %d, Price = %.1f, Total Price = %.1f, Shares Remaining = %d \n",Shares,Price,Shares*Price,TradeRecords2->SharesRemaining);
     printf("===============================================\n");
+
+    WriteNum(Shares,str,fp)
+    WriteFloatNum(Price,str,fp)
+    WriteNum(TradeRecords2->SharesRemaining,str,fp)
 
     Counter += 1;
     if(TradeRecords2->Next == NULL)
@@ -1025,9 +1045,19 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
 
   } while(TradeRecords2 != NULL);
 
-  AvgBuyPrice  = AvgBuyPrice  / (float)BuyCount;   
+  AvgBuyPrice  = AvgBuyPrice / (float)BuyCount;   
   AvgSellPrice = AvgSellPrice / (float)SellCount;
   TotalRemainValues = (TotalOut - TotalIn) + (LastDayPrice*SharesRemaining);
+
+  fputs("total",fp);
+  WriteFloatNum(LastDayPrice,str,fp)
+  WriteNum(SharesRemaining,str,fp)
+  WriteFloatNum(TotalIn,str,fp)
+  WriteFloatNum(TotalOut,str,fp)
+  WriteNum(BuyCount,str,fp)
+  WriteNum(SellCount,str,fp)
+  WriteFloatNum(((float)TotalRemainValues / (float) TotalIn )*100,str,fp)
+  fputs("end",fp);
 
   printf("Last Day Price = %.1f, Shares Remaining = %d, Remaining Shares Values = %.1f\n",LastDayPrice, SharesRemaining, LastDayPrice*SharesRemaining);
   printf("Input Money= %.1f, Output Money = %.1f, Buy/Sell/Total Count = %d/%d/%d, Average Buy/Sell Price(per shares treade) = %1.f, %1.f\n", TotalIn, TotalOut ,BuyCount,SellCount,Counter,AvgBuyPrice,AvgSellPrice);
@@ -1041,10 +1071,12 @@ void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **Return
 {
   int         Current;
 
+  gID = InfoBuffer->StockID;
+
   for(Current = StartDayIndex; Current <= EndDayIndex; Current++)
   {
     Sim2Curr = InfoBuffer + Current -1; /* Move day pointer to next day */
-    printf("Day(%d) %d/%d/%d  \n",Sim2Curr->DayIndex,Sim2Curr->Dates.Years,Sim2Curr->Dates.Months,Sim2Curr->Dates.Days);
+    //printf("Day(%d) %d/%d/%d  \n",Sim2Curr->DayIndex,Sim2Curr->Dates.Years,Sim2Curr->Dates.Months,Sim2Curr->Dates.Days);
     TradeRule();
     //printf("End of Day\n");
   }

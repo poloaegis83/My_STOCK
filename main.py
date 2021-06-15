@@ -1,4 +1,5 @@
 import requests
+import os
 import xml.etree.cElementTree as ET
 import lxml.etree as etree
 from itertools import zip_longest
@@ -17,9 +18,9 @@ user_agent_list = ["Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHT
                     "Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10.5; en-US; rv:1.9.2.15) Gecko/20110303 Firefox/3.6.15",
                    ]
 
-StockData = ET.Element('StockData',Version="1.0") # global Stock data
+#StockData = ET.Element('StockData',Version="1.0") # global Stock data
 
-def Get_Data(stock_id,year,month,IsTWSE):
+def Get_Data(stock_id,year,month,IsTWSE,StockData):
 
     yeart = str(int(year)-1911)
 
@@ -51,11 +52,6 @@ def Get_Data(stock_id,year,month,IsTWSE):
         #print(Soup[i].title)
         Tables[i] = Soup[i].findAll('table')
         tab[i]    = Tables[i][0]
-    
-    no_diff = 0
-    
-    if int(year) >= 2020:
-       no_diff = 1
 
     if IsTWSE == 1:
         tab1 = tab[0].findAll('tr')
@@ -86,18 +82,18 @@ def Get_Data(stock_id,year,month,IsTWSE):
     try:
         Get_Data.count += length   # 加函式屬性的值(static variable)
     except AttributeError: 
-        Get_Data.count = length + 1    # 建立函式的屬性(static variable)
+        Get_Data.count += length   # 建立函式的屬性(static variable)
 
     count1 = Get_Data.count - length   # For daily index 屬性累加     
     print("length=",length,"length2 = ",length2)
-    global StockData
+    #global StockData
 
     for tr1 in tab1:
         Daily = ET.Element('Daily')    # 新增 daily element
         StockData.append(Daily)
         Daily.set('Index',str(count1+i))
         Price = ET.SubElement(Daily, 'Price')
-        Difference = ET.SubElement(Daily, 'Difference',LeaderDiff="0",ForeignInvestorsDiff="0",InvestmentTrustDiff="0",DealersDiff="0") # Will uptade in tab[1] and tab[2]
+        ET.SubElement(Daily, 'Difference',LeaderDiff="0",ForeignInvestorsDiff="0",InvestmentTrustDiff="0",DealersDiff="0") # Will uptade in tab[1] and tab[2]
         for td in tr1.findAll('td'):  # 股價
             if j % 9 == 0:  # 日期
                 Daily.set('Years',str(int(td.getText()[0:3])+1911))
@@ -120,7 +116,7 @@ def Get_Data(stock_id,year,month,IsTWSE):
     DiffDataD = []
     DiffDataF = []
     DiffDataL = []
-    ChYes = 0
+
     for tr2 in tab2:  #catch data
         for td in tr2.findAll('td'):  # 三大法人
             if k % 4 == 0:
@@ -205,9 +201,12 @@ def GetDataByID(stock_id,InputStart,InputEnd):
     else:
         BaseException: Error
 
+    StockData = ET.Element('StockData',Version="1.0") # global Stock data
     StockId = ET.SubElement(StockData, 'StockId')
     StockId.text = stock_id
     IsTWSE = Is_TWSE_Listed(stock_id)
+
+    Get_Data.count = 1
 
     if YearDiff == 0:
         MonthDiff = MonthEnd - MonthStart
@@ -216,7 +215,7 @@ def GetDataByID(stock_id,InputStart,InputEnd):
             MonthData = str(MonthStart+monthI).rjust(2,'0')
             print('Y/M',YearData,MonthData)
             time.sleep(6)
-            Get_Data(stock_id, YearData, MonthData, IsTWSE)        
+            Get_Data(stock_id, YearData, MonthData, IsTWSE,StockData)        
     elif YearDiff > 0:
         MonthDiff = ((12 - MonthStart) + MonthEnd) + (YearDiff-1)*12
         yearI = 0
@@ -228,7 +227,7 @@ def GetDataByID(stock_id,InputStart,InputEnd):
                 yearI += 1
             print('Y/M',YearData,MonthData)
             time.sleep(6)
-            Get_Data(stock_id, YearData, MonthData, IsTWSE)
+            Get_Data(stock_id, YearData, MonthData, IsTWSE,StockData)
     else:
         BaseException: Error
 
@@ -244,6 +243,7 @@ def GetDataByID(stock_id,InputStart,InputEnd):
 
         # 將排版的 XML 資料寫入檔案
     root.write("data"+stock_id+".xml", encoding="utf-8")
+
 
 
 f = open("IDList.txt", mode='r')
@@ -262,7 +262,11 @@ InputStart = input ("請輸入起始年月 (ex:201911): ")
 InputEnd = input ("請輸入結束年月(ex:202101): ")
 
 for ID_LIST in IDList:
+    print("ID:",ID_LIST)
+
+for ID_LIST in IDList:
     GetDataByID(ID_LIST,InputStart,InputEnd)
+    os.system("StockEmulator.exe ""data"+ID_LIST+".xml 100")
 
 '''
 YearStart  = int(InputStart[0:4])
