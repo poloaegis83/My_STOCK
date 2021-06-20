@@ -10,15 +10,15 @@
                                   fputs("/",fp);\
                                   _itoa(z,str,10);\
                                   fputs(str,fp);\
-                                  fputs(",",fp);
+                                  fputs("\n",fp);
 
 #define WriteNum(x,str,fp)        _itoa(x,str,10);\
                                   fputs(str,fp);\
-                                  fputs(",",fp);
+                                  fputs("\n",fp);
 
 #define WriteFloatNum(x,str,fp)   gcvt(x,6,str);\
                                   fputs(str,fp);\
-                                  fputs(",",fp);                                  
+                                  fputs("\n",fp);                                  
 
 char           OpenOrClose;
 DAILY_INFO     *Sim2Curr;
@@ -986,7 +986,7 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   AvgSellPrice   = 0;
   str = (char*) malloc(50);
 
-  fputs("Start",fp);
+  fputs("Start\n",fp);
   WriteNum(gID,str,fp)
 
   do{
@@ -1022,10 +1022,10 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
  
     if(TradeRecords2->BuyOrSell){
       printf("In ,");
-      fputs("In,",fp);
+      fputs("In\n",fp);
     } else{
       printf("Out ,");
-      fputs("Out,",fp);
+      fputs("Out\n",fp);
     }
 
     printf("Shares = %d, Price = %.1f, Total Price = %.1f, Shares Remaining = %d \n",Shares,Price,Shares*Price,TradeRecords2->SharesRemaining);
@@ -1049,7 +1049,7 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   AvgSellPrice = AvgSellPrice / (float)SellCount;
   TotalRemainValues = (TotalOut - TotalIn) + (LastDayPrice*SharesRemaining);
 
-  fputs("total",fp);
+  fputs("total\n",fp);
   WriteFloatNum(LastDayPrice,str,fp)
   WriteNum(SharesRemaining,str,fp)
   WriteFloatNum(TotalIn,str,fp)
@@ -1057,7 +1057,7 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   WriteNum(BuyCount,str,fp)
   WriteNum(SellCount,str,fp)
   WriteFloatNum(((float)TotalRemainValues / (float) TotalIn )*100,str,fp)
-  fputs("end",fp);
+  fputs("end\n",fp);
 
   printf("Last Day Price = %.1f, Shares Remaining = %d, Remaining Shares Values = %.1f\n",LastDayPrice, SharesRemaining, LastDayPrice*SharesRemaining);
   printf("Input Money= %.1f, Output Money = %.1f, Buy/Sell/Total Count = %d/%d/%d, Average Buy/Sell Price(per shares treade) = %1.f, %1.f\n", TotalIn, TotalOut ,BuyCount,SellCount,Counter,AvgBuyPrice,AvgSellPrice);

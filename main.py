@@ -6,6 +6,13 @@ from itertools import zip_longest
 from   bs4      import BeautifulSoup
 import time
 import random
+import numpy as np
+from matplotlib import pyplot as plt
+
+PlotDataAllX = []
+PlotDataAllY = []
+PlotDataX = []
+PlotDataY = []
 
 #headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
 
@@ -70,7 +77,7 @@ def Get_Data(stock_id,year,month,IsTWSE,StockData):
     tab3 = tab3[2:]
     tab3.reverse()
 
-    i = 0 # Daily index
+    i = 1 # Daily index
     j = 0 # tab[0] td index2
     k = 0 # tab[1] td index
     l = 0 # tab[2] td index
@@ -87,7 +94,8 @@ def Get_Data(stock_id,year,month,IsTWSE,StockData):
     count1 = Get_Data.count - length   # For daily index 屬性累加     
     print("length=",length,"length2 = ",length2)
     #global StockData
-
+    global PlotDataX
+    global PlotDataY
     for tr1 in tab1:
         Daily = ET.Element('Daily')    # 新增 daily element
         StockData.append(Daily)
@@ -107,9 +115,11 @@ def Get_Data(stock_id,year,month,IsTWSE,StockData):
                Price.set('Low',(td.getText().rstrip()).replace('.',"") )              
             if j % 9 == 6:  # 收盤             
                Price.set('End',(td.getText().rstrip()).replace('.',"") )
+               PlotDataX.append(count1+i)
+               PlotDataY.append((td.getText().rstrip()).replace('.',""))
             j += 1
         i += 1
-    
+
     DiffDay1 = []
     DiffDay2 = []
     DiffDataI = []
@@ -168,6 +178,7 @@ def Get_Data(stock_id,year,month,IsTWSE,StockData):
         count2 += 1
 
 
+
 def Is_TWSE_Listed(stock_id):
     url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=html&date=20200101&stockNo="+stock_id # Test 上市或上櫃
     #global user_agent_list
@@ -206,7 +217,7 @@ def GetDataByID(stock_id,InputStart,InputEnd):
     StockId.text = stock_id
     IsTWSE = Is_TWSE_Listed(stock_id)
 
-    Get_Data.count = 1
+    Get_Data.count = 0
 
     if YearDiff == 0:
         MonthDiff = MonthEnd - MonthStart
@@ -231,6 +242,17 @@ def GetDataByID(stock_id,InputStart,InputEnd):
     else:
         BaseException: Error
 
+    global PlotDataAllX
+    global PlotDataAllY
+    global PlotDataX
+    global PlotDataY
+
+    PlotDataAllX.append(PlotDataX)
+    PlotDataAllY.append(PlotDataY)
+    PlotDataX = []
+    PlotDataY = []
+
+    print("total count = ",Get_Data.count)
         # 建立 XML 檔案
     tree = ET.ElementTree(StockData)
     tree.write("data"+stock_id+".xml",xml_declaration=True,encoding='UTF-8',method="xml")
@@ -239,13 +261,12 @@ def GetDataByID(stock_id,InputStart,InputEnd):
     root = etree.parse("data"+stock_id+".xml")
 
         # 輸出與排版 XML 資料
-    print(etree.tostring(root, pretty_print=True, encoding="unicode"))
+    #print(etree.tostring(root, pretty_print=True, encoding="unicode"))
 
         # 將排版的 XML 資料寫入檔案
     root.write("data"+stock_id+".xml", encoding="utf-8")
 
-
-
+os.system("del result.txt")
 f = open("IDList.txt", mode='r')
 IDList = []
 while 1:
@@ -266,8 +287,33 @@ for ID_LIST in IDList:
 
 for ID_LIST in IDList:
     GetDataByID(ID_LIST,InputStart,InputEnd)
-    os.system("StockEmulator.exe ""data"+ID_LIST+".xml 100")
+    os.system("StockEmulator.exe ""data"+ID_LIST+".xml "+str(Get_Data.count-60))
+    print("Total Days = ",Get_Data.count)
 
+f = open("result.txt", mode='r')
+
+SResultAll = []
+SResult    = []
+
+## Reading result
+for result in f.readlines():
+    if result == "end\n":
+        SResultAll.append(SResult)
+        SResult    = []
+        continue
+    SResult.append( result.replace("\n","") )
+
+print("======================")
+for ana1 in SResultAll:
+    for ana2 in ana1:
+        print(ana2)
+    print("======================")
+
+#for AllX,AllY in PlotDataAllX,PlotDataAllY:
+#    plt.plot(AllX,AllY)
+#    plt.show()
+
+f.close()
 '''
 YearStart  = int(InputStart[0:4])
 MonthStart = int(InputStart[4:6])
