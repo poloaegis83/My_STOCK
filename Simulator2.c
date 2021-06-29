@@ -28,6 +28,30 @@ int            gID;
 
 void MA5Cross20Alg();
 
+void StrIDAppend(char *StringData,int NewId)
+{
+  char *New;
+  char *Ptr;
+  char i;
+
+  New = (char*) malloc(5);
+
+  Ptr = StringData;
+  while( *Ptr != '\0' )
+  {
+    Ptr += 1;
+  }
+
+  _itoa(NewId,New,10);
+
+  for(i = 0; i < 4; i++){
+    *Ptr = *(New+i);
+     Ptr += 1;
+  }
+    *Ptr = '\0';
+  printf("+STRING = %s\n",StringData);  
+}
+
 float PRICE()
 {
   if(OpenOrClose)
@@ -973,8 +997,7 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   FILE   *fp;
   char   *str;
 
-  fp = fopen("result.txt","a");
-
+  str = (char*) malloc(50);
   TotalIn   = 0;
   TotalOut  = 0;
   Counter   = 0;
@@ -984,7 +1007,13 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   SharesInTotal  = 0;
   AvgBuyPrice    = 0;
   AvgSellPrice   = 0;
-  str = (char*) malloc(50);
+  
+  str = "Result";
+  printf(",,,\n",str);
+
+  StrIDAppend(str,gID);
+
+  fp = fopen(str,"w");
 
   fputs("Start\n",fp);
   WriteNum(gID,str,fp)

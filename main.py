@@ -8,11 +8,13 @@ import time
 import random
 import numpy as np
 from matplotlib import pyplot as plt
+import copy
 
-PlotDataAllX = []
-PlotDataAllY = []
 PlotDataX = []
-PlotDataY = []
+PlotDataYH = []
+PlotDataYL = []
+PlotDataYO = []
+PlotDataYC = []
 
 #headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
 
@@ -107,16 +109,26 @@ def Get_Data(stock_id,year,month,IsTWSE,StockData):
                 Daily.set('Years',str(int(td.getText()[0:3])+1911))
                 Daily.set('Months',td.getText()[4:6])
                 Daily.set('Days',td.getText()[7:9])
+                Y = str(int(td.getText()[0:3])+1911)
+                M = td.getText()[4:6]
+                D = td.getText()[7:9]
+                PlotDataX.append(Y+"/"+M+"/"+D)
             if j % 9 == 3:  # 開盤
                 Price.set('Start',(td.getText().rstrip()).replace('.',"") ) 
+                value = (td.getText().rstrip()).replace('.',"")
+                PlotDataYO.append(int(value)/100)
             if j % 9 == 4:  # 最高
-               Price.set('High',(td.getText().rstrip()).replace('.',"") )
+                Price.set('High',(td.getText().rstrip()).replace('.',"") )
+                value = (td.getText().rstrip()).replace('.',"")
+                PlotDataYH.append(int(value)/100)
             if j % 9 == 5:  # 最低
-               Price.set('Low',(td.getText().rstrip()).replace('.',"") )              
+                Price.set('Low',(td.getText().rstrip()).replace('.',"") )
+                value = (td.getText().rstrip()).replace('.',"")
+                PlotDataYL.append(int(value)/100)
             if j % 9 == 6:  # 收盤             
-               Price.set('End',(td.getText().rstrip()).replace('.',"") )
-               PlotDataX.append(count1+i)
-               PlotDataY.append((td.getText().rstrip()).replace('.',""))
+                Price.set('End',(td.getText().rstrip()).replace('.',"") )
+                value = (td.getText().rstrip()).replace('.',"")
+                PlotDataYC.append(int(value)/100)
             j += 1
         i += 1
 
@@ -241,7 +253,7 @@ def GetDataByID(stock_id,InputStart,InputEnd):
             Get_Data(stock_id, YearData, MonthData, IsTWSE,StockData)
     else:
         BaseException: Error
-
+    '''
     global PlotDataAllX
     global PlotDataAllY
     global PlotDataX
@@ -251,7 +263,7 @@ def GetDataByID(stock_id,InputStart,InputEnd):
     PlotDataAllY.append(PlotDataY)
     PlotDataX = []
     PlotDataY = []
-
+    '''
     print("total count = ",Get_Data.count)
         # 建立 XML 檔案
     tree = ET.ElementTree(StockData)
@@ -266,7 +278,169 @@ def GetDataByID(stock_id,InputStart,InputEnd):
         # 將排版的 XML 資料寫入檔案
     root.write("data"+stock_id+".xml", encoding="utf-8")
 
-os.system("del result.txt")
+def SplitYearData():
+    #split by year
+    firstdata = 1
+    YearNow   = 2000
+    DataInYear = []
+    PD_X = []  # PlotDataX in years
+    PD_O = []  # PlotDataY open price in years
+    PD_C = []  # PlotDataY close price in years
+    PD_H = []  # PlotDataY high price in years
+    PD_L = []  # PlotDataY low price in years
+    global PlotDataX
+    global PlotDataYO
+    global PlotDataYC
+    global PlotDataYH
+    global PlotDataYL
+
+    for spli1,spli2,spli3,spli4,spli5 in zip(PlotDataX,PlotDataYO,PlotDataYC,PlotDataYH,PlotDataYL):
+        spli_year = spli1.split("/")
+        #print("SY=",spli_year)
+        if firstdata == 1:
+            YearNow = spli_year[0]
+            firstdata = 0
+        if YearNow != spli_year[0]:
+            print("year changed")
+            DataInYear.append(copy.deepcopy(PD_X))
+            DataInYear.append(copy.deepcopy(PD_O))
+            DataInYear.append(copy.deepcopy(PD_C))
+            DataInYear.append(copy.deepcopy(PD_H))
+            DataInYear.append(copy.deepcopy(PD_L))
+            PD_X.clear()
+            PD_O.clear()
+            PD_C.clear()
+            PD_H.clear()
+            PD_L.clear()
+
+        YearNow = spli_year[0]
+        PD_X.append(spli1)
+        PD_O.append(spli2)
+        PD_C.append(spli3)
+        PD_H.append(spli4)
+        PD_L.append(spli5)
+
+    DataInYear.append(copy.deepcopy(PD_X))
+    DataInYear.append(copy.deepcopy(PD_O))
+    DataInYear.append(copy.deepcopy(PD_C))
+    DataInYear.append(copy.deepcopy(PD_H))
+    DataInYear.append(copy.deepcopy(PD_L))
+
+    return DataInYear
+
+def GenResult(PlotByYear,ID):
+    # Prepare data for K bar
+    # -------------(PlotDataYH)--> (high)
+    #  BarDiffT_H     #上影線
+    # -------------(Topp)--> higher(open,close)
+    #   BarDiff       #K棒
+    # -------------(Butt)--> lower(open,close)
+    #  BarDiffL_B     #下影線
+    # --------------(PlotDataYL)--> (low)
+    #     void        #小於low空白
+    # --------------
+    #os.system("CD Result")
+    os.system("mkdir Result\\"+ID)
+    #os.system("CD ..")    
+    ind = 0
+
+    for YD in PlotByYear:
+        if ind % 5 == 0:
+            PlotDataX = YD
+        if ind % 5 == 1:
+            PlotDataYC = YD
+        if ind % 5 == 2:
+            PlotDataYO = YD
+        if ind % 5 == 3:
+            PlotDataYH = YD
+        if ind % 5 == 4:    
+            PlotDataYL = YD
+        #print("ind",ind)
+        if ind % 5 != 4:  #If ind % 5 = 4, Gen Image result data
+            ind += 1
+            continue
+        ind += 1
+        #print("gen")
+        Years = PlotDataX[0].split("/")
+        #print("YY",Years[0])
+
+        Butt       = []  # lower(open,close)
+        Topp       = []  # higher(open,close)
+        BarDiff    = []  # butt to top
+        BarDiffL_B = []  # low to butt
+        BarDiffT_H = []  # top to high
+        colors     = []  # colors of K bar
+
+        for p1,p2,p3,p4 in zip(PlotDataYC,PlotDataYO,PlotDataYH,PlotDataYL):
+            #print("O=",p2,"C=",p1)
+            if p1 > p2:
+                Butt.append(p2)
+                Topp.append(p1)
+                BarDiff.append(p1-p2)
+                BarDiffL_B.append(p2-p4)
+                BarDiffT_H.append(p3-p1)
+                colors.append("green")
+            elif p1 < p2:
+                Butt.append(p1)
+                Topp.append(p2)
+                BarDiff.append(p2-p1)
+                BarDiffL_B.append(p1-p4)
+                BarDiffT_H.append(p3-p2)
+                colors.append("red")
+            else:
+                Topp.append(p1)
+                Butt.append(p2)
+                BarDiff.append(0.06)
+                BarDiffL_B.append(p1-p4)
+                BarDiffT_H.append(p3-p2)
+                colors.append("black")
+    
+        MaxV = max(PlotDataYH) #Max value
+        MinV = min(PlotDataYL) #Min value
+        LenD = len(PlotDataX)  #Len of x axis
+        RatioX = LenD/245
+        RatioY = (MaxV - MinV)/150 #Y ratio
+        DpiR   = 360*RatioX*RatioY
+
+        print("RX = ",RatioX,"RY = ",RatioY,"DPI = ",DpiR)
+        Years = PlotDataX[0].split("/")
+        fig = plt.figure(figsize=(96,20),dpi=330)
+        #plt.grid(True, axis='y')
+        plt.grid(True,zorder=0)
+        plt.title("Stock ID:"+ID+"    Years:"+Years[0],fontsize=80)
+        plt.xlabel("Date",fontsize=40) 
+        plt.ylabel("Price",fontsize=40)
+        plt.bar(PlotDataX,BarDiffL_B,bottom=PlotDataYL,color=colors,width=0.06*RatioX,zorder=100)
+        plt.bar(PlotDataX,BarDiffT_H,bottom=Topp,color=colors,width=0.06*RatioX,zorder=100)
+        plt.bar(PlotDataX,BarDiff,bottom=Butt,color=colors,width=0.6*RatioX,zorder=100)
+        plt.xticks(rotation=90,fontsize=20)
+        plt.yticks(fontsize=20)
+
+        #plt.show()
+        for a,b,c,d,e in zip(PlotDataX,PlotDataYH,Topp,Butt,PlotDataYL):
+            plt.text(a, b+1.3*RatioY, '%.1f' %b, ha='center', va= 'bottom',fontsize=2,zorder=100)
+            plt.text(a, b+0.9*RatioY, '%.1f' %c, ha='center', va= 'bottom',fontsize=2,zorder=100)
+            plt.text(a, b+0.5*RatioY, '%.1f' %d, ha='center', va= 'bottom',fontsize=2,zorder=100)
+            plt.text(a, b+0.1*RatioY, '%.1f' %e, ha='center', va= 'bottom',fontsize=2,zorder=100)
+    
+        fig.set_figheight(20)
+        fig.set_figwidth(96)
+        PIC_NAME = "K_Bar"+ID+"_"+Years[0]+".png"
+        fig.savefig(PIC_NAME)
+        os.system("move "+PIC_NAME+" Result/"+ID+"/")
+        #os.system("mkdir Result"+ID)
+        #os.system("move K_Bar"+ID+"_"+Years[0]+".png \Result"+ID)
+        plt.cla()
+        plt.clf()
+        plt.close(fig)
+
+        Butt.clear()
+        Topp.clear()
+        BarDiff.clear()
+        BarDiffL_B.clear()
+        BarDiffT_H.clear()
+        colors.clear()
+
 f = open("IDList.txt", mode='r')
 IDList = []
 while 1:
@@ -281,16 +455,27 @@ f.close()
 
 InputStart = input ("請輸入起始年月 (ex:201911): ")
 InputEnd = input ("請輸入結束年月(ex:202101): ")
-
+os.system("rmdir Result /s /q")
+os.system("mkdir Result")
 for ID_LIST in IDList:
     print("ID:",ID_LIST)
+    os.system("del Result"+ID_LIST)
 
 for ID_LIST in IDList:
     GetDataByID(ID_LIST,InputStart,InputEnd)
     os.system("StockEmulator.exe ""data"+ID_LIST+".xml "+str(Get_Data.count-60))
     print("Total Days = ",Get_Data.count)
 
-f = open("result.txt", mode='r')
+    PlotByYear = SplitYearData()
+    GenResult(PlotByYear,ID_LIST)
+    PlotDataX.clear()
+    PlotDataYO.clear()
+    PlotDataYC.clear()
+    PlotDataYH.clear()
+    PlotDataYL.clear()
+
+'''
+f = open("Result"+ID_LIST, mode='r')
 
 SResultAll = []
 SResult    = []
@@ -308,12 +493,15 @@ for ana1 in SResultAll:
     for ana2 in ana1:
         print(ana2)
     print("======================")
-
-#for AllX,AllY in PlotDataAllX,PlotDataAllY:
+'''
+#for AllX,AllY in PlotDataX,PlotDataY:
 #    plt.plot(AllX,AllY)
 #    plt.show()
+#plt.plot(PlotDataX,PlotDataY,":")
+#plt.show()
 
-f.close()
+
+#f.close()
 '''
 YearStart  = int(InputStart[0:4])
 MonthStart = int(InputStart[4:6])
