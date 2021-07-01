@@ -2,19 +2,24 @@ import requests
 import os
 import xml.etree.cElementTree as ET
 import lxml.etree as etree
-from itertools import zip_longest
 from   bs4      import BeautifulSoup
 import time
 import random
-import numpy as np
 from matplotlib import pyplot as plt
 import copy
+from FetchData import FetchHistoryData
 
 PlotDataX = []
 PlotDataYH = []
 PlotDataYL = []
 PlotDataYO = []
 PlotDataYC = []
+
+Result_X      = []
+Result_Y      = []
+Result_Action = []
+Result_Share  = []
+Result_Remain = []
 
 #headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"}
 
@@ -116,15 +121,15 @@ def Get_Data(stock_id,year,month,IsTWSE,StockData):
             if j % 9 == 3:  # 開盤
                 Price.set('Start',(td.getText().rstrip()).replace('.',"") ) 
                 value = (td.getText().rstrip()).replace('.',"")
-                PlotDataYO.append(int(value)/100)
+                PlotDataYO.append(int(value)/100)                
             if j % 9 == 4:  # 最高
                 Price.set('High',(td.getText().rstrip()).replace('.',"") )
                 value = (td.getText().rstrip()).replace('.',"")
-                PlotDataYH.append(int(value)/100)
+                PlotDataYH.append(int(value)/100)                
             if j % 9 == 5:  # 最低
                 Price.set('Low',(td.getText().rstrip()).replace('.',"") )
                 value = (td.getText().rstrip()).replace('.',"")
-                PlotDataYL.append(int(value)/100)
+                PlotDataYL.append(int(value)/100)                       
             if j % 9 == 6:  # 收盤             
                 Price.set('End',(td.getText().rstrip()).replace('.',"") )
                 value = (td.getText().rstrip()).replace('.',"")
@@ -278,7 +283,65 @@ def GetDataByID(stock_id,InputStart,InputEnd):
         # 將排版的 XML 資料寫入檔案
     root.write("data"+stock_id+".xml", encoding="utf-8")
 
+def SplitYearResult():
+
+    global Result_X
+    global Result_Y
+    global Result_Action
+    global Result_Share
+    global Result_Remain
+
+    #split by year
+    firstdata = 1    
+    YearNow   = 2000
+    ResultInYear = []
+    R_X  = []  # result X
+    R_Y  = []  # result Y
+    R_A  = []  # result Action
+    R_S  = []  # result Shares
+    R_R  = []  # result Remain
+
+    for spli1,spli2,spli3,spli4,spli5 in zip(Result_X,Result_Y,Result_Action,Result_Share,Result_Remain):
+        spli_year = spli1.split("/")
+        if firstdata == 1:    
+            YearNow = spli_year[0]
+            firstdata = 0
+        if YearNow != spli_year[0]:
+            #print("year changed")
+            ResultInYear.append(copy.deepcopy(R_X))
+            ResultInYear.append(copy.deepcopy(R_Y))
+            ResultInYear.append(copy.deepcopy(R_A))
+            ResultInYear.append(copy.deepcopy(R_S))
+            ResultInYear.append(copy.deepcopy(R_R))
+            R_X.clear()
+            R_Y.clear()
+            R_A.clear()
+            R_S.clear()
+            R_R.clear()
+
+        YearNow = spli_year[0]
+        R_X.append(spli1)
+        R_Y.append(spli2)
+        R_A.append(spli3)
+        R_S.append(spli4)
+        R_R.append(spli5)
+
+    ResultInYear.append(copy.deepcopy(R_X))
+    ResultInYear.append(copy.deepcopy(R_Y))
+    ResultInYear.append(copy.deepcopy(R_A))
+    ResultInYear.append(copy.deepcopy(R_S))
+    ResultInYear.append(copy.deepcopy(R_R))
+
+    return ResultInYear
+
 def SplitYearData():
+
+    global PlotDataX
+    global PlotDataYO
+    global PlotDataYC
+    global PlotDataYH
+    global PlotDataYL
+
     #split by year
     firstdata = 1
     YearNow   = 2000
@@ -288,11 +351,6 @@ def SplitYearData():
     PD_C = []  # PlotDataY close price in years
     PD_H = []  # PlotDataY high price in years
     PD_L = []  # PlotDataY low price in years
-    global PlotDataX
-    global PlotDataYO
-    global PlotDataYC
-    global PlotDataYH
-    global PlotDataYL
 
     for spli1,spli2,spli3,spli4,spli5 in zip(PlotDataX,PlotDataYO,PlotDataYC,PlotDataYH,PlotDataYL):
         spli_year = spli1.split("/")
@@ -301,7 +359,7 @@ def SplitYearData():
             YearNow = spli_year[0]
             firstdata = 0
         if YearNow != spli_year[0]:
-            print("year changed")
+            #print("year changed")
             DataInYear.append(copy.deepcopy(PD_X))
             DataInYear.append(copy.deepcopy(PD_O))
             DataInYear.append(copy.deepcopy(PD_C))
@@ -328,7 +386,62 @@ def SplitYearData():
 
     return DataInYear
 
+def ReadResult(ID):
+
+    global Result_X
+    global Result_Y
+    global Result_Action
+    global Result_Share
+    global Result_Remain
+
+    Result_X.clear()
+    Result_Y.clear()
+    Result_Action.clear()
+    Result_Share.clear()
+    Result_Remain.clear()
+
+    f = open("Result"+ID, mode='r')
+
+    SResult    = []
+
+    ## Reading result
+    for result in f.readlines():
+        SResult.append( result.replace("\n","") )
+
+    Check_Sim_exist = 0
+    Counter = 0
+    #print("======================")
+    for ana in SResult:
+        #print("ana = ",ana,"c = ",Counter)
+        if ana == "Start":
+            Check_Sim_exist = 1
+            #print("check S")
+        if ana == "total":
+            break
+        if Counter > 1 and Check_Sim_exist == 1 and ana != "end":
+            #print("check E")
+            if Counter % 5 == 2:
+                Result_X.append(ana)
+            if Counter % 5 == 3:
+                Result_Action.append(ana)
+            if Counter % 5 == 4:
+                Result_Share.append(ana)
+            if Counter % 5 == 0:
+                print(ana)
+                Result_Y.append(float(ana))
+            if Counter % 5 == 1:
+                Result_Remain.append(ana)
+        Counter += 1
+
+
 def GenResult(PlotByYear,ID):
+
+    ReadResult(ID)
+    ResultInYear = SplitYearResult()
+
+    #for a,b,c in zip(Result_X,Result_Y,Result_Action):
+    #    print("a,b,c",a,"--",b,"--",c)
+
     # Prepare data for K bar
     # -------------(PlotDataYH)--> (high)
     #  BarDiffT_H     #上影線
@@ -342,26 +455,60 @@ def GenResult(PlotByYear,ID):
     #os.system("CD Result")
     os.system("mkdir Result\\"+ID)
     #os.system("CD ..")    
-    ind = 0
+    ind  = 0
+    ind2 = 0
 
     for YD in PlotByYear:
         if ind % 5 == 0:
-            PlotDataX = YD
+            PlotDataX = copy.deepcopy(YD)
         if ind % 5 == 1:
-            PlotDataYC = YD
+            PlotDataYC = copy.deepcopy(YD)
         if ind % 5 == 2:
-            PlotDataYO = YD
+            PlotDataYO = copy.deepcopy(YD)
         if ind % 5 == 3:
-            PlotDataYH = YD
+            PlotDataYH = copy.deepcopy(YD)
         if ind % 5 == 4:    
-            PlotDataYL = YD
+            PlotDataYL = copy.deepcopy(YD)
         #print("ind",ind)
         if ind % 5 != 4:  #If ind % 5 = 4, Gen Image result data
             ind += 1
             continue
         ind += 1
-        #print("gen")
+        
         Years = PlotDataX[0].split("/")
+
+        #Get result in years
+        ind2 = 0
+        for YR in ResultInYear:
+            #print("ind2 = ",ind2)
+            #print("ResultInYear = ",ResultInYear)
+            if ind2 % 5 == 0:
+                Result_X = copy.deepcopy(YR)
+            if ind2 % 5 == 1:
+                Result_Y = copy.deepcopy(YR)
+            if ind2 % 5 == 2:
+                Result_Action = copy.deepcopy(YR)
+            if ind2 % 5 == 3:
+                Result_Share = copy.deepcopy(YR)
+            if ind2 % 5 == 4:    
+                Result_Remain = copy.deepcopy(YR)
+            if ind2 % 5 != 4:  #If ind % 5 = 4, Gen Image result data
+                ind2 += 1
+                continue
+
+            Years2 = Result_X[0].split("/")
+            if Years[0] == Years2[0]: # data and result match
+                #print("year match")
+                break
+            ind2 += 1
+            Result_X.clear()
+            Result_Y.clear()
+            Result_Action.clear()
+            Result_Share.clear()
+            Result_Remain.clear()  
+
+        #print("gen")
+
         #print("YY",Years[0])
 
         Butt       = []  # lower(open,close)
@@ -416,6 +563,9 @@ def GenResult(PlotByYear,ID):
         plt.xticks(rotation=90,fontsize=20)
         plt.yticks(fontsize=20)
 
+        plt.plot(Result_X,Result_Y)
+        for a,b,c in zip(Result_X,Result_Y,Result_Action):
+            plt.text( a, b+10*RatioY , c, ha='center', va= 'bottom',fontsize=20,zorder=100)
         #plt.show()
         for a,b,c,d,e in zip(PlotDataX,PlotDataYH,Topp,Butt,PlotDataYL):
             plt.text(a, b+1.3*RatioY, '%.1f' %b, ha='center', va= 'bottom',fontsize=2,zorder=100)
@@ -433,6 +583,12 @@ def GenResult(PlotByYear,ID):
         plt.cla()
         plt.clf()
         plt.close(fig)
+
+        Result_X.clear()
+        Result_Y.clear()
+        Result_Action.clear()
+        Result_Share.clear()
+        Result_Remain.clear()    
 
         Butt.clear()
         Topp.clear()
@@ -463,7 +619,7 @@ for ID_LIST in IDList:
 
 for ID_LIST in IDList:
     GetDataByID(ID_LIST,InputStart,InputEnd)
-    os.system("StockEmulator.exe ""data"+ID_LIST+".xml "+str(Get_Data.count-60))
+    os.system("StockEmulator.exe ""data"+ID_LIST+".xml "+str(Get_Data.count-61))
     print("Total Days = ",Get_Data.count)
 
     PlotByYear = SplitYearData()
@@ -474,26 +630,8 @@ for ID_LIST in IDList:
     PlotDataYH.clear()
     PlotDataYL.clear()
 
-'''
-f = open("Result"+ID_LIST, mode='r')
+#FetchHistoryData("2330","2018","2020")
 
-SResultAll = []
-SResult    = []
-
-## Reading result
-for result in f.readlines():
-    if result == "end\n":
-        SResultAll.append(SResult)
-        SResult    = []
-        continue
-    SResult.append( result.replace("\n","") )
-
-print("======================")
-for ana1 in SResultAll:
-    for ana2 in ana1:
-        print(ana2)
-    print("======================")
-'''
 #for AllX,AllY in PlotDataX,PlotDataY:
 #    plt.plot(AllX,AllY)
 #    plt.show()
@@ -502,72 +640,3 @@ for ana1 in SResultAll:
 
 
 #f.close()
-'''
-YearStart  = int(InputStart[0:4])
-MonthStart = int(InputStart[4:6])
-
-YearEnd    = int(InputEnd[0:4])
-MonthEnd   = int(InputEnd[4:6])
-
-YearDiff   = YearEnd - YearStart
-
-if YearDiff == 0:
-    MonthDiff = MonthEnd - MonthStart
-elif YearDiff > 0:
-    MonthDiff = ((12 - MonthStart) + MonthEnd) + (YearDiff-1)*12
-else:
-    BaseException: Error
-
-# Init XML struct
-StockId = ET.SubElement(StockData, 'StockId')
-StockId.text = stock_id
-
-IsTWSE = Is_TWSE_Listed(stock_id)
-
-if YearDiff == 0:
-    MonthDiff = MonthEnd - MonthStart
-    for monthI in range(MonthDiff+1):
-        YearData  = str(YearStart)
-        MonthData = str(MonthStart+monthI).rjust(2,'0')
-        print('Y/M',YearData,MonthData)
-        time.sleep(6)
-        Get_Data(stock_id, YearData, MonthData, IsTWSE)        
-elif YearDiff > 0:
-    MonthDiff = ((12 - MonthStart) + MonthEnd) + (YearDiff-1)*12
-    yearI = 0
-    for monthI in range(MonthDiff+1):
-        YearData  = str(YearStart+yearI)
-        MonthData = str(((MonthStart+monthI)%12)).rjust(2,'0')
-        if MonthData == '00':
-            MonthData = '12'
-            yearI += 1
-        print('Y/M',YearData,MonthData)
-        time.sleep(6)
-        Get_Data(stock_id, YearData, MonthData, IsTWSE)
-else:
-    BaseException: Error
-'''
-''' debug
-IsTWSE = Is_TWSE_Listed(stock_id)
-Get_Data(stock_id,'2020','01',IsTWSE)
-Get_Data(stock_id,'2020','02',IsTWSE)
-Get_Data(stock_id,'2020','03',IsTWSE)
-Get_Data(stock_id,'2020','04',IsTWSE)
-Get_Data(stock_id,'2020','05',IsTWSE)
-
-    # 建立 XML 檔案
-tree = ET.ElementTree(StockData)
-tree.write("data"+stock_id+".xml",xml_declaration=True,encoding='UTF-8',method="xml")
-
-    # 讀取 XML 檔案
-root = etree.parse("data"+stock_id+".xml")
-
-    # 輸出與排版 XML 資料
-print(etree.tostring(root, pretty_print=True, encoding="unicode"))
-
-    # 將排版的 XML 資料寫入檔案
-root.write("data"+stock_id+".xml", encoding="utf-8")
-'''
-#ET.dump(StockData)
-
-#os.remove('test.xml')

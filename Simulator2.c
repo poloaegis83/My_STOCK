@@ -2,13 +2,16 @@
 
 #define MOVE_TO_X_DAYS_AGO(x)     Sim2Curr-=x;
 #define MOVE_TO_X_DAYS_FORWORD(x) Sim2Curr+=x;
+
 #define WriteDates(x,y,z,str,fp)  _itoa(x,str,10);\
                                   fputs(str,fp);\
                                   fputs("/",fp);\
                                   _itoa(y,str,10);\
+                                  InsertZeroForDate(str);\
                                   fputs(str,fp);\
                                   fputs("/",fp);\
                                   _itoa(z,str,10);\
+                                  InsertZeroForDate(str);\
                                   fputs(str,fp);\
                                   fputs("\n",fp);
 
@@ -17,8 +20,11 @@
                                   fputs("\n",fp);
 
 #define WriteFloatNum(x,str,fp)   gcvt(x,6,str);\
+                                  CheckFloatString(str);\
                                   fputs(str,fp);\
-                                  fputs("\n",fp);                                  
+                                  fputs("\n",fp);
+
+
 
 char           OpenOrClose;
 DAILY_INFO     *Sim2Curr;
@@ -27,6 +33,51 @@ TRADE_RECORD2  *Record2Current = NULL;
 int            gID;
 
 void MA5Cross20Alg();
+
+/***
+ To prevet date number string like "2020/1/1"
+ should be "2020/01/01"
+***/
+void InsertZeroForDate(char *Dates)
+{
+  char Val;
+  if(*(Dates+1) == '\0') // if single number
+  {
+    Val = *(Dates);
+    *(Dates)   = '0';
+    *(Dates+1) = Val;
+    *(Dates+2) = '\0';
+  }
+
+}
+
+/***
+ To prevet float number string like "200."
+ should be "200.0"
+***/
+void CheckFloatString(char *Num)
+{
+    int i;
+    char TheLastIsPoint = 0;
+
+    i = 0;
+
+    while(*(Num+i) != '\0')
+    {
+      TheLastIsPoint = 0;
+      if ( *(Num+i) == '.')
+      {
+        TheLastIsPoint = 1;
+      }
+      i += 1;
+    }
+
+    if(TheLastIsPoint == 1)
+    {
+      *(Num+i)   = '0';
+      *(Num+i+1) = '\0';
+    }
+}
 
 void StrIDAppend(char *StringData,int NewId)
 {
