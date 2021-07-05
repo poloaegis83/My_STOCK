@@ -19,10 +19,11 @@
                                   fputs(str,fp);\
                                   fputs("\n",fp);
 
-#define WriteFloatNum(x,str,fp)   gcvt(x,6,str);\
-                                  CheckFloatString(str);\
-                                  fputs(str,fp);\
-                                  fputs("\n",fp);
+#define WriteFloatNum(x,str,fp)     FixPoint2(x);\
+                                    gcvt(x,6,str);\
+                                    CheckFloatString(str);\
+                                    fputs(str,fp);\
+                                    fputs("\n",fp);
 
 
 
@@ -31,6 +32,8 @@ DAILY_INFO     *Sim2Curr;
 TRADE_RECORD2  *Record2Head = NULL;
 TRADE_RECORD2  *Record2Current = NULL;
 int            gID;
+
+int     FixFlag;
 
 void MA5Cross20Alg();
 
@@ -52,31 +55,78 @@ void InsertZeroForDate(char *Dates)
 }
 
 /***
+ To prevet scientific notation leads gcvt error
+ ex: 0.04 can casue error
+***/
+void FixPoint2(float Num)
+{
+  if (Num < 0.1 && Num > 0)
+    FixFlag = 1;
+  else if (Num > -0.1 && Num < 0 )
+    FixFlag = 2;
+  else
+    FixFlag = 0;  
+}
+
+
+/***
  To prevet float number string like "200."
  should be "200.0"
 ***/
 void CheckFloatString(char *Num)
 {
-    int i;
-    char TheLastIsPoint = 0;
+  int i;
+  char TheLastIsPoint = 0;
+  char IsPoint = 0;
 
-    i = 0;
+  i = 0;
 
-    while(*(Num+i) != '\0')
+  while(*(Num+i) != '\0')
+  {
+    TheLastIsPoint = 0;
+    if ( *(Num+i) == '.')
     {
-      TheLastIsPoint = 0;
-      if ( *(Num+i) == '.')
+      TheLastIsPoint = 1;
+    }
+    i += 1;
+  }
+
+  if(TheLastIsPoint == 1)
+  {
+    *(Num+i)   = '0';
+    *(Num+i+1) = '0';
+    *(Num+i+2) = '\0';
+  }
+    
+  i = 0;
+  while(*(Num+i) != '\0')
+  {
+    if ( *(Num+i) == '.')
+    {
+      if(*(Num+i+2) == '\0')
       {
-        TheLastIsPoint = 1;
+        *(Num+i+2) = '0';
       }
-      i += 1;
+      *(Num+i+3) = '\0';
+      break;
     }
+    i += 1;
+  }
 
-    if(TheLastIsPoint == 1)
-    {
-      *(Num+i)   = '0';
-      *(Num+i+1) = '\0';
-    }
+  if(FixFlag == 1)
+  {
+    *(Num+3) = *(Num);
+    *(Num)   = '0';
+    *(Num+2) = '0';
+    *(Num+4) = '\0';
+  }
+  if(FixFlag == 2)
+  {
+    *(Num+4)  = *(Num+1);
+    *(Num+1)  = '0';
+    *(Num+3)  = '0';
+    *(Num+5)  = '\0';
+  }
 }
 
 void StrIDAppend(char *StringData,int NewId)
@@ -1144,6 +1194,7 @@ void AnalysisProfit2 (TRADE_RECORD2 *TradeRecords2)
   printf("Total Remain (Out - In)+Remaining Shares Values = %.1f\n", TotalRemainValues );
   printf("Returns(Total Remain)/Input = %.1f%%\n", ((float)TotalRemainValues / (float) TotalIn )*100 );
 
+  free(str);
   fclose(fp);
 }
 
