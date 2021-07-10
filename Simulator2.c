@@ -51,7 +51,6 @@ void InsertZeroForDate(char *Dates)
     *(Dates+1) = Val;
     *(Dates+2) = '\0';
   }
-
 }
 
 /***

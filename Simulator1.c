@@ -1,4 +1,5 @@
 #include "DataDefine.h"
+int         ChipAnalysisFlag; /*Featrue*/
 
 void FindBuyPoint (int StartDayIndex, int EndDayIndex, int *BuyDayIndex ,float *BuyPrice);
 void FindSellPoint (int BuyDayIndex, int EndDayIndex, float BuyPrice, int *SellDayIndex, float *SellPrice);

@@ -1,125 +1,26 @@
-#include "expat.h"
 #include "DataDefine.h"
 
 char DebugFlag = 0;
 
-void InitStockDailyInfoData (FILE *fp, int days);
-void CalculateMA (int days);
+void InitStockDailyInfoData (FILE *fp);
+void CalculateMA (int days, int *result);
 void CalculateRSI (int days);
 void CalculateKDJ (int days);
 void CalculateMACD (int days);
-void StartElement (void *data, const char *element, const char **attribute);
-void EndElement   (void *data, const char *element);
-void ElementData  (void *data, const char *content, int length);
 
-char        StockIdFlag;
+int           StartYear;
+int           EndYear;
+int           StartMonth;
+int           EndMonth;
+int           StartDay;
+int           EndDay;
+int           len;
 int         TheStockID;
-int         Depth;              /*Global element depth*/
-int         GlobalDays;
 DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 DAILY_INFO  *BuffInitPtr;
-XML_Parser   Parser;
-int         ChipAnalysisFlag; /*Featrue*/
 
-void StartElement (void *data, const char *Element, const char **attribute)
-{ 
-  int i;
-  const char *Value;
 
-  Depth++;
-  
-  if(GlobalDays == 0){
-  	 return;
-  }
-
-  if ( !strcmp("Daily",Element) || !strcmp("Price",Element) || !strcmp("Difference",Element)) // Element = Daily or Price or Difference
-  {
-    for(i = 0; attribute[i]; i += 2)
-    {
-	  Value = attribute[i+1];
-	  if(!strcmp("Index",attribute[i]))
-	  {
-        BuffInitPtr->DayIndex      = (int)atoi(Value);
-	  }
-	  if(!strcmp("Years",attribute[i]))
-	  {
-        BuffInitPtr->Dates.Years   = (int)atoi(Value);
-	  }
-	  if(!strcmp("Months",attribute[i]))
-	  {
-        BuffInitPtr->Dates.Months  = (int)atoi(Value);
-	  }
-	  if(!strcmp("Days",attribute[i]))
-	  {
-        BuffInitPtr->Dates.Days    = (int)atoi(Value);
-	  }
-	
-	  if(!strcmp("Start",attribute[i]))
-	  {
-      BuffInitPtr->Start         = (float)atoi(Value) / 100;
-	  }
-	  if(!strcmp("High",attribute[i]))
-	  {
-	    BuffInitPtr->High          = (float)atoi(Value) / 100;
-	  }
-	  if(!strcmp("Low",attribute[i]))
-	  {
-	    BuffInitPtr->Low           = (float)atoi(Value) / 100; 
-	  }
-	  if(!strcmp("End",attribute[i]))
-	  {
-	    BuffInitPtr->End           = (float)atoi(Value) / 100;
-	  }
-
-	  if(!strcmp("DealersDiff",attribute[i]))
-	  {
-	    BuffInitPtr->DealersDiff           = atoi(Value);
-	  }
-	  if(!strcmp("ForeignInvestorsDiff",attribute[i]))
-	  {
-	    BuffInitPtr->ForeignInvestorsDiff  = atoi(Value);
-	  }
-	  if(!strcmp("InvestmentTrustDiff",attribute[i]))
-	  {
-	    BuffInitPtr->InvestmentTrustDiff   = atoi(Value);
-	  }
-	  if(!strcmp("LeaderDiff",attribute[i]))
-	  {
-	    BuffInitPtr->LeaderDiff            = atoi(Value);
-	  }
-    }
-  }
-  if (!strcmp("StockId",Element)) // Element = StockId
-  {
-    StockIdFlag = 1;
-  }
-}
-
-void EndElement   (void *Data, const char *Element)
-{
-  Depth--;
-  if(GlobalDays == 0){
-  	 return;
-  }
-  if (!strcmp("Daily",Element))
-  {
-	  BuffInitPtr->StockID = TheStockID;
-    BuffInitPtr++;    /*Move the pointer to next day*/
-	  GlobalDays--;
-  }
-
-}
-
-void ElementData  (void *Data, const char *Content, int Length)
-{
-  if(StockIdFlag)
-  {
-	TheStockID = atoi(Content);
-    StockIdFlag = 0;
-  }
-}
-
-void PrintInfo(days)
+void PrintInfo(int days)
 {
   DAILY_INFO  *Daily;
   int         DailyIndex;
@@ -127,7 +28,7 @@ void PrintInfo(days)
   Daily = InfoBuffer;
   
   printf("\n=================================================\n");
-  for(DailyIndex = 0; DailyIndex < days+FIRST_DAILY_DATA_INDEX -1 ; DailyIndex++)
+  for(DailyIndex = 1; DailyIndex <= days ; DailyIndex++)
   {
     printf("======================For:%d=====================\n\n",DailyIndex);    
     printf("DayIndex(ID:%d)   %d/%d/%d            = %d\n",Daily->StockID,Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,Daily->DayIndex);
@@ -142,130 +43,154 @@ void PrintInfo(days)
   printf("\n=================================================\n");
 }
 
-void InitStockDailyInfoData(FILE *fp , int days)
+void ReadLine(FILE *fp,char *str)
 {
-  //
-  // Catch stock data and ID from XML file, then init the data to struct.
-  //
-  void         *Buff;
-  int          FileLens;
-  DEBUG("InitStockDailyInfoData Start\n");  
-  //
-  // Allcate memory to buffer, the first data should 20 (depends on FIRST_DAILY_DATA_INDEX) days before start day for calculate MA20 (depends on FIRST_DAILY_DATA_INDEX) .
-  //
-  InfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(days+FIRST_DAILY_DATA_INDEX+50));
+  fscanf(fp,"%s",str);
+}
+
+int FindTotalLen(FILE *fp)
+{
+  char  *str;
+  int   counter = 0;
+
+  str = (char *) malloc(50);
+
+  while(1)
+  {
+    ReadLine(fp,str);
+    if (!strcmp("end",str))
+      break;
+    counter++;
+  }
+
+  fseek(fp, 0, SEEK_SET);
+
+  return counter/11;
+}
+
+void InitStockDailyInfoData(FILE *fp)
+{
+  char *str;
+
+  int i = 1;
+  int Year,Month;
+  int Record = 0;
+  
+  str = (char*) malloc(50);
+
+  len = FindTotalLen(fp);
+
+  InfoBuffer = (DAILY_INFO*) malloc(sizeof(DAILY_INFO)*(len));
+
   BuffInitPtr = InfoBuffer;
 
-  GlobalDays = days + FIRST_DAILY_DATA_INDEX - 1;  // Total days needs, prevent init data over the buffer
-  Parser   = XML_ParserCreate(NULL);
-
-  Buff     = XML_GetBuffer(Parser, BUFF_SIZE);               //Allocate buffer
-
-  FileLens = fread( Buff, sizeof(char), BUFF_SIZE, fp);      //Read data to buffer
-
-  //
-  // Set parser callback function
-  //
-  XML_SetStartElementHandler (Parser,StartElement);  /*When element start*/
-  XML_SetEndElementHandler (Parser,EndElement);      /*When element end*/
-  XML_SetCharacterDataHandler (Parser,ElementData);  /*When element data*/
-
-  //
-  // Parsing XML data and write into DailyInfoBuffer
-  //
-  // Call parser
-  //
-  if (! XML_ParseBuffer(Parser, FileLens, FileLens == 0)) {
-    /* handle parse error */
-  }
-  DEBUG("Parsing finished\n");  
-
-  //
-  // Calculate MA, KD, RSI and MACD then write into DailyInfoBuffer
-  //
-  CalculateMA (days);
-
-  CalculateRSI (days);
-
-  CalculateKDJ (days);
-  
-  CalculateMACD (days);
-
-  PrintInfo(days);
-  
-  DEBUG("InitStockDailyInfoData End\n");   
-}
-
-void CalculateMA(int days)
-{
-  //
-  // Calculate MA data write into DAILY_INFO.
-  //
-  float         Price5;
-  float         Price10;
-  float         Price20;
-  float         Price60;
-  float         Price120;   
-  int         MAIndex;
-  int         DailyCounter;
-  DAILY_INFO  *Daily;
-  
-  DEBUG("CalculateMA Start\n");    
-  //
-  // Todo: Need add error handle here
-  //
-
-  Daily = InfoBuffer + MA_MAX -1; /*Day Number 20*/
-
-  for(DailyCounter = 0; DailyCounter < days + (FIRST_DAILY_DATA_INDEX - MA_MAX) ; DailyCounter++)
+  while(1)
   {
-    Price5       = 0;
-    Price10      = 0;
-    Price20      = 0;
-    Price60      = 0;
-    Price120     = 0;
+    printf("i = %d ",i);
+    ReadLine(fp,str);
 
-    if(MA_MAX >= 5){
-      for(MAIndex = 0; MAIndex < 5; MAIndex ++) {
-        Price5 += (Daily-MAIndex)->End;
-      }
-      Daily->MA.MA5    = Price5/5;
+    if (!strcmp("end",str))
+      break;
+    Year  = (int)atoi(str);
+
+    ReadLine(fp,str);
+    Month = (int)atoi(str);
+
+    if ( (Year > StartYear  && Year  < EndYear)    ||\
+         (Year == StartYear && Month > StartMonth) ||\
+         (Year == EndYear   && Month < EndMonth)  )
+    {
+      BuffInitPtr->Dates.Years  = Year;
+      BuffInitPtr->Dates.Months = Month;
+      Record = 1;
     }
+    else
+      Record = 0;
 
-    if(MA_MAX >= 10){
-      for(MAIndex = 0; MAIndex < 10; MAIndex ++) {
-        Price10 += (Daily-MAIndex)->End;
-      }
-      Daily->MA.MA10   = Price10/10;
-    }
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->Dates.Days   = (int)atoi(str);
 
-    if(MA_MAX >= 20){
-      for(MAIndex = 0; MAIndex < 20; MAIndex ++) {
-        Price20 += (Daily-MAIndex)->End;
-      }
-      Daily->MA.MA20   = Price20/20;
-    }
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->Start        = (float)atoi(str) / 100;
 
-    if(MA_MAX >= 60){
-      for(MAIndex = 0; MAIndex < 60; MAIndex ++) {
-        Price60 += (Daily-MAIndex)->End;
-      }
-      Daily->MA.MA60   = Price60/60;
-    }
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->End          = (float)atoi(str) / 100;
 
-    if(MA_MAX >= 120){
-      for(MAIndex = 0; MAIndex < 120; MAIndex ++) {
-        Price120 += (Daily-MAIndex)->End;
-      }
-      Daily->MA.MA120  = Price120/120;
-    }
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->High         = (float)atoi(str) / 100;
 
-    Daily += 1;
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->Low          = (float)atoi(str) / 100;
+
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->InvestmentTrustDiff  = (int)atoi(str);
+
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->DealersDiff          = (int)atoi(str);
+
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->ForeignInvestorsDiff = (int)atoi(str);
+
+    ReadLine(fp,str);
+    if(Record)
+      BuffInitPtr->LeaderDiff           = (int)atoi(str);
+
+    if(Record)
+      BuffInitPtr->DayIndex             = i;
+
+    BuffInitPtr++;
+    i++;
   }
-  DEBUG("CalculateMA End\n");  
+  
+  len = i;
+
+  PrintInfo(len);
+
+  free(str);
 }
 
-void CalculateMACD(int days)
+/*
+void CalculateMA(int day, int *Result)
+{
+    DAILY_INFO  *Daily;
+    float   Total = 0;
+    int     i,count;
+    float   *ResultPtr;
+
+    i = 0;
+    count = 0;
+
+    Daily     = InfoBuffer;
+
+    Result = (float *) malloc(sizeof(int)*(len));
+
+    ResultPtr = Result;
+
+    Daily     = InfoBuffer;
+
+    for ( count = 0; count <= len; count++)
+    {
+      for (i = 0; i < day; i++)
+      {
+        Total += (Daily-i)->End;
+      }
+      *ResultPtr    = Total/day;
+
+      Total = 0;
+      ResultPtr++;
+      Daily++;
+    }
+}
+
+void CalculateMACD(int days, int *Result)
 {
   DAILY_INFO  *Daily;
   int         DailyCounter;
@@ -299,7 +224,7 @@ void CalculateMACD(int days)
 
 }
 
-void CalculateRSI(int days)
+void CalculateRSI(int days, int *Result)
 {
   //
   // Calculate RSI data write into DAILY_INFO.
@@ -311,8 +236,8 @@ void CalculateRSI(int days)
   float       Increase,Decrease;
   float       Upt,Dnt;
 
-  Daily6    = InfoBuffer + 7 -1;  /*Day Index 7*/
-  Daily12   = InfoBuffer + 13 -1; /*Day Index 13*/
+  Daily6    = InfoBuffer + 7 -1;  //Day Index 7
+  Daily12   = InfoBuffer + 13 -1; //Day Index 13
 
 
   for(DailyCounter = 0; DailyCounter < days + (FIRST_DAILY_DATA_INDEX -7); DailyCounter++)
@@ -421,7 +346,7 @@ void CalculateRSI(int days)
   }
 }
 
-void CalculateKDJ(int days)
+void CalculateKDJ(int days, int *Result)
 {
   //
   // Calculate KD data write into DAILY_INFO.
@@ -439,7 +364,7 @@ void CalculateKDJ(int days)
   //
 
   RSV_n   = 9;
-  Daily   = InfoBuffer + RSV_n -1; /*(Day number 9)*/
+  Daily   = InfoBuffer + RSV_n -1; //(Day number 9)
 
   //
   // Default K,D Value = 50 (Day number 8)
@@ -456,7 +381,7 @@ void CalculateKDJ(int days)
     Highest = Daily->High;
     Lowest  = Daily->Low;
     //printf("Begin Highest= %d Loweest =%d  \n", Highest, Lowest);
-    for (i = 1; i < RSV_n; i++) /*To pervious 8 days*/
+    for (i = 1; i < RSV_n; i++) //To pervious 8 days
     {
       //printf("-%d day,High = %d, Low = %d   \n",i,(Daily-i)->High,(Daily-i)->Low );
       if((Daily-i)->High > Highest)
@@ -470,18 +395,19 @@ void CalculateKDJ(int days)
     }
     //printf("After Daily(9) Highest= %d Loweest =%d  \n\n", Highest, Lowest);
     Daily->KDJ.RSV = (Daily->End - Lowest) / (Highest - Lowest) * 100;
-    Daily->KDJ.K = ((Daily-1)->KDJ.K * 2 / 3) +  (Daily->KDJ.RSV / 3);  /*Pervious K * 2/3 + todays RSV *1/3 */
-    Daily->KDJ.D = ((Daily-1)->KDJ.D * 2 / 3) +  (Daily->KDJ.K /3);     /*Pervious D * 2/3 + todays K   *1/3 */
+    Daily->KDJ.K = ((Daily-1)->KDJ.K * 2 / 3) +  (Daily->KDJ.RSV / 3);  //Pervious K * 2/3 + todays RSV *1/3 
+    Daily->KDJ.D = ((Daily-1)->KDJ.D * 2 / 3) +  (Daily->KDJ.K /3);     //Pervious D * 2/3 + todays K   *1/3 
     Daily->KDJ.J = Daily->KDJ.K * 3 - Daily->KDJ.D * 2;
 
     Daily += 1;
   }
 
 }
-
+*/
 int main(int argc, char **argv)
 {
-  int           DayIntervals;    //Tatol days for emulator
+  char          *Str;
+  char          *Str2;
   int           StartDayIndex;
   int           EndDayIndex;
   TRADE_RECORD  *ReturnRecords;
@@ -492,7 +418,8 @@ int main(int argc, char **argv)
   // Argument format:
   // StockEmulator.exe [XmlFileName] [Days] -c(ChipAnalysisFlag on)
   //
-  ChipAnalysisFlag = 0;
+
+  Str2 = (char*) malloc(50);
 
   for(ArgIndex = 0; ArgIndex < argc; ArgIndex++)
   {
@@ -507,45 +434,74 @@ int main(int argc, char **argv)
 
 	 if(ArgIndex == 2)
 	 {
-	   DayIntervals = atoi(argv[2]);
-     if ( DayIntervals <= 0)
-     {
-       printf("Error: DayIntervals should > 0\n");
-       return 1;
-     }
-	 }
-	 if(!strcmp("-c",argv[ArgIndex]))
-	 {
-	   ChipAnalysisFlag = 1;
+	   Str = argv[2];
+
+     *Str2     = *Str;
+     *(Str2+1) = *(Str+1);
+     *(Str2+2) = *(Str+2);
+     *(Str2+3) = *(Str+3);
+     *(Str2+4) = *(Str+4);
+     *(Str2+5) = '\n';
+     StartYear  = atoi(Str2);
+
+     *(Str2+1) = *(Str+5);
+     *(Str2+2) = *(Str+6);
+     *(Str2+3) = '\n';
+     StartMonth = atoi(Str2);
+
+     *(Str2+1) = *(Str+7);
+     *(Str2+2) = *(Str+8);
+     *(Str2+3) = '\n';    
+     StartDay   = atoi(Str2);
 	 }
 
- }
+  if(ArgIndex == 3)
+	 {
+	   Str = argv[3];
+
+     *Str2     = *Str;
+     *(Str2+1) = *(Str+1);
+     *(Str2+2) = *(Str+2);
+     *(Str2+3) = *(Str+3);
+     *(Str2+4) = *(Str+4);
+     *(Str2+5) = '\n';
+     EndYear  = atoi(Str2);
+
+     *(Str2+1) = *(Str+5);
+     *(Str2+2) = *(Str+6);
+     *(Str2+3) = '\n';
+     EndMonth = atoi(Str2);
+
+     *(Str2+1) = *(Str+7);
+     *(Str2+2) = *(Str+8);
+     *(Str2+3) = '\n';    
+     EndDay   = atoi(Str2);     
+	 }
+  
+  }
 
   //
   // Init the stock data struct
   //
-  InitStockDailyInfoData (fp, DayIntervals);
+  //InitStockDailyInfoData2(fp);
 
   //
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
   //
 
   ReturnRecords = NULL;
- 
-  StartDayIndex = FIRST_DAILY_DATA_INDEX;  /*Start from Index day 62 (60, 61 for analysis)*/
 
-  EndDayIndex = StartDayIndex + DayIntervals -1;
-
-  printf("DayIntervals = %d, Start from day index %d(Start) to %d(End)\n",DayIntervals,StartDayIndex,EndDayIndex);  
 
   //StockSimulator1 (StartDayIndex, EndDayIndex, &ReturnRecords);
-  StockSimulator2 (StartDayIndex, EndDayIndex, &ReturnRecords2);
+  //StockSimulator2 (StartDayIndex, EndDayIndex, &ReturnRecords2);
+  //StockSimulator3
+
   //
   // Calculate profit base on the records
   //
   //AnalysisProfit (ReturnRecords);
-  AnalysisProfit2 (ReturnRecords2);
-  free(InfoBuffer);
-  XML_ParserFree(Parser);
+  //AnalysisProfit2 (ReturnRecords2);
+  //free(InfoBuffer);
+  //XML_ParserFree(Parser);
   return 0;
 }

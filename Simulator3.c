@@ -185,7 +185,7 @@ void TradeRule()
 
 }
 
-void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecords2Head)
+void StockSimulator3(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecords2Head)
 {
   int         Current;
 

@@ -36,6 +36,7 @@ struct _MA_Value {
    float MA20;
    float MA60;
    float MA120;
+   float MA240;
 };
 
 struct _MACD_Value {
