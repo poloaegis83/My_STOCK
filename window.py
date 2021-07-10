@@ -748,24 +748,24 @@ var7.trace("w", lambda name, index,mode, var=var5: Entry7callback())
 # lebal
 l1 = tk.Label(window,textvariable= IDvar, bg='yellow') 
 l2 = tk.Label(window,text='Get stock history data(date format: yyyymm)', font=('Comic Sans MS', 20))
-l3 = tk.Label(window,text='Start Year:', font=('Arial' ) )
-l4 = tk.Label(window,text='End year:', font=('Arial' ) ) 
+l3 = tk.Label(window,text='Start Year:', font=('Corbel' ) )
+l4 = tk.Label(window,text='End year:', font=('Corbel' ) ) 
 l5 = tk.Label(window,text='Add or Remove ID', font=('Comic Sans MS', 20))
 l6 = tk.Label(window,textvariable= SetIdSta)
-l7 = tk.Label(window,text='Stock ID:', font=('Arial' ) ) 
-l8 = tk.Label(window,text='Select Now:', font=('Arial' ) )  # Select Now
-l9 = tk.Label(window,textvariable=SelectOp, font=('Arial' ) )  
-l10 = tk.Label(window,text='Rule Now:', font=('Arial' ) )  
-l11 = tk.Label(window,textvariable=CList, font=('Arial' ) )  
-l12 = tk.Label(window,textvariable=ListText, font=('Arial' ) )
+l7 = tk.Label(window,text='Stock ID:', font=('Corbel' ) ) 
+l8 = tk.Label(window,text='Select Now:', font=('Corbel' ) )  # Select Now
+l9 = tk.Label(window,textvariable=SelectOp, font=('Corbel' ) )  
+l10 = tk.Label(window,text='Rule Now:', font=('Corbel' ) )  
+l11 = tk.Label(window,textvariable=CList, font=('Corbel' ) )  
+l12 = tk.Label(window,textvariable=ListText, font=('Corbel' ) )
 l13 = tk.Label(window,text="Save/Load rule from file", font=('Comic Sans MS', 20) )
 l14 = tk.Label(window,text="Rule editor", font=('Comic Sans MS', 20) )
-l15 = tk.Label(window,text="Days Interval:", font=('Arial' ) )
-l16 = tk.Label(window,text="Function:", font=('Arial' ) )
-l17 = tk.Label(window,text="Trade Type:", font=('Arial' ) )
-l18 = tk.Label(window,text="Shares:", font=('Arial' ) )
+l15 = tk.Label(window,text="Days Interval:", font=('Corbel' ) )
+l16 = tk.Label(window,text="Function:", font=('Corbel' ) )
+l17 = tk.Label(window,text="Trade Type:", font=('Corbel' ) )
+l18 = tk.Label(window,text="Shares:", font=('Corbel' ) )
 l19 = tk.Label(window,text="Rules:", font=('Comic Sans MS', 20) )
-l20 = tk.Label(window,text="No:", font=('Arial' ) )
+l20 = tk.Label(window,text="No:", font=('Corbel' ) )
 
 ll0 = tk.Label(window,text="         ", font=('Arial' ) , bg='green')
 ll1 = tk.Label(window,text="         ", font=('Arial' ) , bg='red')
@@ -798,15 +798,15 @@ e6 = tk.Entry(window,textvariable=var6,width = 6, show=None)  #, width=9, font=(
 e7 = tk.Entry(window,textvariable=var7,width = 4, show=None)  #, width=9, font=('Arial', 14))  # remove number
 
 # button
-b1 = tk.Button(window, text='Get data', font=('Arial', 9), width=8, height=1, command=get)
-b2 = tk.Button(window, text='Add ID', font=('Arial', 9), command=AddId)
-b3 = tk.Button(window, text='Remove ID', font=('Arial', 9), command=RemoveID)
-b4 = tk.Button(window, text='Add select to rule', font=('Arial', 9), command=AddSelect)
-b5 = tk.Button(window, text='Backspace', font=('Arial', 9), command=Backspace)
-b6 = tk.Button(window, text='Create a Rule', font=('Arial', 13), command=CreatCondition)
-b7 = tk.Button(window, text='Remove rule by number', font=('Arial', 9), command=RemoveCurrentConditionList)
-b8 = tk.Button(window, text='Save Rule', font=('Arial', 9), command=SaveConditionToFile)
-b9 = tk.Button(window, text='Load Rule', font=('Arial', 9), command=LoadConditionFromFile)
+b1 = tk.Button(window, text='Get data', font=('Constantia', 9), width=8, height=1, command=get)
+b2 = tk.Button(window, text='Add ID', font=('Constantia', 9), command=AddId)
+b3 = tk.Button(window, text='Remove ID', font=('Constantia', 9), command=RemoveID)
+b4 = tk.Button(window, text='Add select to rule', font=('Constantia', 9), command=AddSelect)
+b5 = tk.Button(window, text='Backspace', font=('Constantia', 9), command=Backspace)
+b6 = tk.Button(window, text='Create a Rule', font=('Constantia', 12 , "bold" ), command=CreatCondition)
+b7 = tk.Button(window, text='Remove rule by number', font=('Constantia', 9), command=RemoveCurrentConditionList)
+b8 = tk.Button(window, text='Save Rule', font=('Constantia', 9), command=SaveConditionToFile)
+b9 = tk.Button(window, text='Load Rule', font=('Constantia', 9), command=LoadConditionFromFile)
 
 Rowr += 1
 
@@ -846,7 +846,7 @@ Rowr += 1
 
 I = 1
 for Type,Index in TechType:
-    r1 = tk.Radiobutton(window, text=Type, variable=R1var, value=Index, font=('Arial',8 ), command=SelectRangeOp)
+    r1 = tk.Radiobutton(window, text=Type, variable=R1var, value=Index, font=('Corbel',9 ), command=SelectRangeOp)
     if I > 17:
         I = 1
         Rowr += 1
@@ -865,7 +865,7 @@ e5.grid(row=Rowr, column=I,columnspan=2,sticky ="W")
 I += 1
 
 for Type,Index in FindInRange:   # average lowest highest sum
-    r1 = tk.Radiobutton(window, text=Type, variable=R2var, value=Index, font=('Arial',8 ), command=SelectRangeOp)
+    r1 = tk.Radiobutton(window, text=Type, variable=R2var, value=Index, font=('Corbel',9 ), command=SelectRangeOp)
     r1.grid(row=Rowr, column=I,columnspan=3,sticky ="W")
     I += 2
 Rowr += 1
@@ -885,7 +885,7 @@ Rowr += 1
 l17.grid(row=Rowr, column=1,columnspan=5,sticky ="W")  # trade type
 I = 4
 for Type,Index in TradeType:
-    r1 = tk.Radiobutton(window, text=Type, variable=R3var, font=('Arial',8 ), value=Index)
+    r1 = tk.Radiobutton(window, text=Type, variable=R3var, font=('Corbel',9 ), value=Index)
     r1.grid(row=Rowr, column=I,columnspan=5,sticky ="W")
     I += 2
 I += 2
