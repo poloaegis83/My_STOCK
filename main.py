@@ -249,7 +249,7 @@ def GenResult(PlotByYear,ID):
             ind += 1
             continue
         ind += 1
-        
+
         Years = PlotDataX[0].split("/")
 
         #Get result in years

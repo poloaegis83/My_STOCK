@@ -131,4 +131,6 @@ extern TRADE_RECORD2  *Record2Current;
 void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecordsHead);
 void AnalysisProfit2 (TRADE_RECORD2  *TradeRecords2);
 
+void LoadRule();
+void MainProcess2();
 #endif /*_STOCK_DATA_*/

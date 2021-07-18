@@ -7,14 +7,14 @@ import os
 
 ConditionListAll = []
 ConditionList = []
-OpSelected = 0
-Rowr       = 0
-SetCount   = 0
+OpSelected  = 0
+Rowr        = 0
+SetCount    = 0
 
 FindInRange=[("Lowest",40),("Higest",41),("Average",42),("Sum",43),("None",0)]
 
-TechType=[("Open",1),("High",2),("Low",3),("Close",4),("MA",5),("RSI",6),("KD",7),("MACD",8),("Value",9),(">",20),("<",21),(">=",22),
-("<=",23),("=",24),("+",25),("-",26),("*",27),("/",28),("CrossUp",29),("CrossDown",30),("And",31),("Or",32)]
+TechType=[("Open",1),("High",2),("Low",3),("Close",4),("MA",5),("RSI",6),("KD_K",7),("KD_D",8),("MACD",9),("Value",10),(">",20),("<",21),(">=",22),
+("<=",23),("=",24),("+",25),("-",26),("*",27),("/",28),("CrossUp",29),("CrossDown",30),("(",31),(")",32),("And",33),("Or",34)]
 
 TradeType = [("Buy",50),("Sell",51),("BuyNextBar",52)]
 
@@ -154,10 +154,10 @@ def AddSelect():
         Opcode2V = -1
 
     if Opcode2 != 0:   # if have average highest lowest
-        if Opcode1 == 0 or Opcode1 >= 9: # avoid average(+,10) average(value(10),10)
+        if Opcode1 == 0 or Opcode1 >= 10: # avoid average(+,10) average(value(10),10)
             print("error combnation")
             return
-        if ListLast > 0 and ListLast < 10:
+        if ListLast > 0 and ListLast < 10:  # avoid any value in the fornt
             SelectOp.set("not allow pointer")
             return
         if Opcode2V == -1:
@@ -165,29 +165,36 @@ def AddSelect():
             return
         if Opcode1V == -1:
             SelectOp.set("please input a value")
-            return  
+            return
+
         ConditionList.append(str(Opcode2))
         ConditionList.append(str(Opcode2V))
         ConditionList.append(str(Opcode1))
         ConditionList.append(str(Opcode1V))
 
     elif Opcode2 == 0: # if no average highest lowest
-        if Opcode1 > 0 and Opcode1 < 10:
-            if ListLast > 0 and ListLast < 10:  # Not allow value follow by value
+        if (Opcode1 > 0 and Opcode1 <= 10) or Opcode1 == 31:  # case of item not imapcat by place at first price and'('
+            if ListLast > 0 and ListLast <= 10:  # Not allow value follow by value
                 SelectOp.set("not allow")
                 return
-            if Opcode1V == -1:
+            if Opcode1V == -1 and Opcode1 > 0 and Opcode1 <= 10:
                 SelectOp.set("Please input a vaule")
                 return
-            ConditionList.append(str(Opcode1))
-            ConditionList.append(str(Opcode1V))
+
+            if Opcode1 == 31 : # for the case of '('
+                ConditionList.append(str(Opcode1))
+                ConditionList.append("-1")
+            else:             # case of price
+                ConditionList.append(str(Opcode1))
+                ConditionList.append(str(Opcode1V))
             print("List now1",ConditionList)
-        elif length > 0:
-            if Opcode1 >= 20 and Opcode1 <= 30:  #operater
+
+        elif length > 0: # case of item not allow being the first, ( '+', '-', '*', '/', ')','CrossUp','CrossDown','and','or' )
+            if Opcode1 >= 20 and Opcode1 <= 30:  #  '+', '-', '*', '/', ')','CrossUp','CrossDown'
                 if  OpSelected == 1:
                     SelectOp.set("2 operter in condition")
                     return
-                if  ListLast == 0 or ( ListLast >= 20 and ListLast <= 32 ): # Operation should not being the first or follow by other operater
+                if  ListLast == 0 or ( (ListLast >= 20 and ListLast <= 30) or ListLast == 33 or ListLast == 34): # Operation should not being the first or follow by other operater
                     SelectOp.set("not allow operater")
                     return
                 ConditionList.append(str(Opcode1))
@@ -195,14 +202,19 @@ def AddSelect():
                 print("List now2",ConditionList)
                 OpSelected = 1
 
-            if Opcode1 >= 31 and Opcode1 <= 32:  #operater
-                if  ListLast == 0 or ( ListLast >= 20 and ListLast <= 32 ): # Operation should not being the first or follow by other operater
+            if Opcode1 >= 33 and Opcode1 <= 34:  # 'and','or'
+                if  ListLast == 0 or ( (ListLast >= 20 and ListLast <= 30) or ListLast == 33 or ListLast == 34): # Operation should not being the first or follow by other operater
                     SelectOp.set("not allow operater")
                     return
                 ConditionList.append(str(Opcode1))
                 ConditionList.append("-1")
                 print("List now3",ConditionList)
                 OpSelected = 0
+            
+            if Opcode1 == 32 : # for the case of '('
+                ConditionList.append(str(Opcode1))
+                ConditionList.append("-1")
+
         else:
             SelectOp.set("Not being the first")
 
@@ -324,12 +336,12 @@ def ReadListToLabel(file):
     length = 0
     Maxlen = 0
 
-    # find max length to pending
+    # find max length to pending a space to list
     for Lis in file.readlines():
         Data = Lis[0:-1]  # to remove /n in last
         if Data == "end":  # done find max length
             i = 0
-            length = len( PrepareConditionString(trade,share,count,List) )
+            length = len( PrepareConditionString(trade,share,count,List) )  # find a string len end by "end"
             print("len",length)
             if length  > Maxlen:
                 Maxlen = length
@@ -354,8 +366,8 @@ def ReadListToLabel(file):
         Data = Lis[0:-1]  # to remove /n in last
         print("Data",Data)
         if Data == "end":  # done, make a string
-            i = 0
-            p = 0
+            i = 0          # if read "end" reset i = 0, as rule header
+            p = 0          # for pending space to a string list
             TextNow = PrepareConditionString(trade,share,count,List)
             length = len( TextNow )
             TextAll += TextNow
@@ -415,11 +427,19 @@ def CreatCondition():
 
     Op  = 0
     i   = 0
+    balance = 0
+    # Check brackets balance
+
     for Lis in ConditionList:
         #print("i=",i,"L=",Lis)
         print("Lisa,",Lis)
         if i % 2 == 0:
-            if int(Lis) == 31 or int(Lis) == 32: # when and or op
+            # '(',')' balance check
+            if int(Lis) == 31:
+                balance += 1
+            if int(Lis) == 32:
+                balance -= 1
+            if int(Lis) == 33 or int(Lis) == 34: # when and, or op
                 if i == 0: # and or should not being first
                     print("error1 and or not being first")
                     return
@@ -438,7 +458,11 @@ def CreatCondition():
                     #print("<>=")
         #if i % 2 == 1:
         i += 1
-    
+
+    if balance != 0:
+        print("brackets balance check fail")
+        return
+
     if Op == 0: # after check op should be 1
         print("error4 no op")
         return
@@ -481,7 +505,7 @@ def SelectRangeOp():
     print("op1 =",Opcode1)
 
     if Opcode2 == 0:   # Range op = 0, using Tech op only
-        if Opcode1 > 0 and Opcode1 < 10 and Opcode1V != -1 :
+        if Opcode1 > 0 and Opcode1 <= 10 and Opcode1V != -1 :
             combo = OpToStr(Opcode1) + "(" + str(Opcode1V) + ")"
         else:
             combo = OpToStr(Opcode1)
@@ -491,7 +515,7 @@ def SelectRangeOp():
         else:
             combo = OpToStr(Opcode2)+"()"
     else:  # Tech + Range
-        if Opcode1 > 0 and Opcode1 < 9:
+        if Opcode1 > 0 and Opcode1 <= 9:
             if Opcode1V != -1 and Opcode2V != -1:
                 combo1 = OpToStr(Opcode1) + "(" + str(Opcode1V) + ")"               # average(10)
                 combo = OpToStr(Opcode2)+ "("+ combo1 +"," + str(Opcode2V) + ")"    # average(open(10),10)
@@ -693,6 +717,125 @@ try:
 except:
     print("no file to remove")
 
+
+def Run():     # check rule, and prepare which item needed
+
+
+    YearStart = var1.get()
+    YearEnd   = var2.get()
+
+    if YearStart == "" or YearEnd == "":
+        print("please input time")
+        return
+
+    # check time in range
+    # TBD ...
+
+    # check history data already download
+    '''
+    for StockID in IDList:
+        check_name = "History"+StockID+"_201301_202012"
+        try:
+            f = open(check_name, mode='r')
+        except FileNotFoundError:
+            print("History Data not found! please download it first")
+            return
+        f.close()
+    '''
+    # Call format: CalculateData.exe [filename] [Stock Id] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] ...
+
+    ItemOne=["MA","RSI","KD","MACD"]
+    ItemList=[("MA",5),("RSI",6),("KD",7),("KD",8),("MACD",9)]
+
+    Item  = []
+    Value = []
+
+    CalItemList = ""   # String of item
+
+    f = open("ConditionList.stock", mode='r')
+
+    i = 0
+    DataCatch   = 0
+    StartOfRule = 1
+    for Lis in f.readlines():
+
+        Data = Lis[0:-1]  # to remove /n in last
+        if Data == "end":
+            StartOfRule = 1
+            continue
+
+        if StartOfRule > 0:  # skip first 2, Trade and Shares
+            if StartOfRule == 2:
+                StartOfRule = 0
+            else:
+                StartOfRule += 1
+            continue
+        if i % 2 == 0:             # Read Op
+            print("op = ",Lis)
+            for a,b in ItemList:
+                print("a,b ",a,b)
+                if Data == str(b):
+                    print("match")
+                    DataCatch   = 1
+                    Item.append(a)
+
+        if i % 2 == 1 and DataCatch == 1:   # If Op readed then read value follow
+            Value.append(Data)
+            DataCatch = 0
+
+        i += 1
+
+    OneList  = []  # sort out list item into only one item left
+
+    for a in ItemOne:  # check if match the ItemOne list add it to OneList
+        match = 0
+        for b in Item:
+            if a == b:
+                match = 1
+        if match == 1:
+            OneList.append(a)
+
+    print("OneList",OneList)
+
+    ValueListInOne = []
+
+    for c in OneList:
+        MatchCounter = 0
+        for a,b in zip(Item,Value):
+            if c == a:
+                print("add value")
+                match = 0
+                if len(ValueListInOne) == 0: # if zero add it item's value first
+                    ValueListInOne.append(b)
+                    MatchCounter = 1
+                else:
+                    for d in ValueListInOne:    # compare if already in list
+                        if d == b: # new value append
+                            match = 1
+                    if match == 0:  # if not in list, add it
+                        ValueListInOne.append(b)
+                        MatchCounter += 1
+
+        CalItemList += " -"+c+" "+str(MatchCounter) # -KD
+        for e in ValueListInOne:
+            CalItemList += " "+e   # -KD 20 30 40
+        ValueListInOne.clear()
+
+    f.close()
+
+    for StockID in IDList:
+        # Check calculate data filename
+        Filename = "History"+StockID+"_201301_202012"
+
+        CalDataStr = "CalculateData.exe "+Filename+" "+StockID+CalItemList+" -Range "+YearStart+" "+YearEnd
+        print(CalDataStr)
+
+        # Call format: CalculateData.exe [filename] [Stock Id] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] ...
+        #os.system(CalDataStr)  #call CalculateData to preare data
+    
+    # After parepare data, then call simulator through main.py
+
+
 f = open("IDList.txt", mode='r')
 IDList = []
 while 1:
@@ -807,6 +950,7 @@ b6 = tk.Button(window, text='Create a Rule', font=('Constantia', 12 , "bold" ), 
 b7 = tk.Button(window, text='Remove rule by number', font=('Constantia', 9), command=RemoveCurrentConditionList)
 b8 = tk.Button(window, text='Save Rule', font=('Constantia', 9), command=SaveConditionToFile)
 b9 = tk.Button(window, text='Load Rule', font=('Constantia', 9), command=LoadConditionFromFile)
+b10 = tk.Button(window, text='Run', font=('Constantia', 10), width = 7, height = 4, command=Run)
 
 Rowr += 1
 
@@ -826,12 +970,13 @@ Rowr += 1
 
 l5.grid(row=Rowr, column=0,columnspan=20)    # Add or Remove ID lebal
 l6.grid(row=Rowr, column=5,sticky ="W")      # Add or Remove ID status lebal
+b10.grid(row=Rowr,column=14,rowspan=4,columnspan=5,sticky ="E")
 Rowr += 1
 
 l7.grid(row=Rowr, column=1,columnspan=2,sticky ="E")   # stock id
 e3.grid(row=Rowr, column=3,columnspan=3,sticky ="W")   # add id entry
-b2.grid(row=Rowr, column=7,columnspan=3,sticky ="W")   # add id button
-b3.grid(row=Rowr, column=9,columnspan=3,sticky ="W")   # remove id button
+b2.grid(row=Rowr, column=8,columnspan=3,sticky ="W")   # add id button
+b3.grid(row=Rowr, column=10,columnspan=3,sticky ="W")   # remove id button
 Rowr += 1
 
 l13.grid(row=Rowr, column=0,columnspan=20) # Save/Load rule from file label

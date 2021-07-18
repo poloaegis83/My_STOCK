@@ -419,6 +419,7 @@ int main(int argc, char **argv)
   // StockEmulator.exe [XmlFileName] [Days] -c(ChipAnalysisFlag on)
   //
 
+  MainProcess2();
   Str2 = (char*) malloc(50);
 
   for(ArgIndex = 0; ArgIndex < argc; ArgIndex++)

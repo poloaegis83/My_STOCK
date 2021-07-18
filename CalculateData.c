@@ -21,6 +21,7 @@ DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 int StartCalIndex;
 int len;
 int len_v;
+int StockId;
 
 int         *MA_value;
 int         MA_count = 0;
@@ -667,14 +668,38 @@ void CalKD()
 
 void WriteCalData()
 {
-  int    i;
+  int    i,j,k;
   FILE   *fp;
   char   *str;
-
-  str = "TechResult";
-  fp = fopen(str,"w");
+  char   *Id;
 
   str = (char*) malloc(50);
+  Id  = (char*) malloc(10);
+
+  _itoa(StockId,Id,10);
+
+  str = "TechResult";
+
+  j = 0;
+  while (1)
+  {
+    j++;
+    if (*(str+j) == '\0')
+      break;
+  }
+
+  for (k = 0; k < 5; k++)
+  {
+    *(str+j+k) = *(Id+k);
+    if (k == 4)
+      *(str+j+k) = '\0';
+  }
+
+  printf("ID str = %s\n",Id);
+  printf("ID = %d\n",StockId);
+  printf("str = %s\n",str);
+
+  fp = fopen(str,"w");
 
   fputs("length\n",fp);
  
@@ -736,8 +761,9 @@ int main(int argc, char **argv)
     FILE        *fp;
     int         ArgIndex;
     char        *str,*StartDate,*EndDate;
-    int i;
+    int         i;
 
+    // format [filename] [Stock Id] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] ...
     for(ArgIndex = 0; ArgIndex < argc; ArgIndex++)
     {
   	  if(ArgIndex == 1)
@@ -749,6 +775,17 @@ int main(int argc, char **argv)
           return 1;  
         }
       }
+
+      if(ArgIndex == 2)
+      {
+        StockId = (int)atoi(argv[ArgIndex]); 
+        if(StockId < 0 || StockId > 9999)
+        {
+          printf("Id not correct!\n");
+          return 1;
+        } 
+      }
+
 	    if(!strcmp("-MA",argv[ArgIndex]))
 	    {
         MA_count = atoi(argv[ArgIndex+1]);
