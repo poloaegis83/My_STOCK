@@ -133,4 +133,18 @@ void AnalysisProfit2 (TRADE_RECORD2  *TradeRecords2);
 
 void LoadRule();
 void MainProcess2();
+
+extern int         *MA_value;
+extern int         MA_count;
+
+extern int         *KD_value;
+extern int         KD_count;
+
+extern int         *MACD_value;
+extern int         MACD_count;
+
+extern int         *RSI_value;
+extern int         RSI_count;
+extern int         StockId;
+
 #endif /*_STOCK_DATA_*/

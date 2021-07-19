@@ -12,10 +12,22 @@ int           StartYear;
 int           EndYear;
 int           StartMonth;
 int           EndMonth;
-int           StartDay;
-int           EndDay;
-int           len;
-int         TheStockID;
+
+int         *MA_value;
+int         MA_count = 0;
+
+int         *KD_value;
+int         KD_count = 0;
+
+int         *MACD_value;
+int         MACD_count = 0;
+
+int         *RSI_value;
+int         RSI_count = 0;
+
+int         len;
+int         StockId;
+
 DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 DAILY_INFO  *BuffInitPtr;
 
@@ -404,6 +416,361 @@ void CalculateKDJ(int days, int *Result)
 
 }
 */
+/*
+int  *RuleBuy;
+int  *RuleSell;
+int  *RuleBuyNext;
+
+int  *RuleBuyLen;
+int  *RuleSellLen;
+int  *RuleBuyNextLen;
+
+int  RuleBuyLenTotal = 0;
+int  RuleSellLenTotal = 0;
+int  RuleBuyNextLenTotal = 0;
+
+int  RuleBuyCount = 0;
+int  RuleSellCount = 0;
+int  RuleBuyNextCount = 0;
+
+void LoadRule()
+{
+  FILE    *fp;
+  char    *str;
+  int     i;
+  int     EndCheck;
+  char    TradeMode;
+  int     *RuleBuyPtr;
+  int     *RuleSellPtr;
+  int     *RuleBuyNextPtr;
+  int     *RuleBuyLenPtr;
+  int     *RuleSellLenPtr;
+  int     *RuleBuyNextLenPtr;
+
+  TradeMode     = 0;
+
+  i = 0;
+  EndCheck = 0;
+  str = (char*) malloc(50);
+
+  fp = fopen("ConditionList.stock","r");
+
+  while(1)
+  {
+    ReadLine(fp,str);
+
+    if ( !strcmp("end",str) && EndCheck == 1)  // read end twice => EOF
+      break;
+
+    if (!strcmp("end",str))  // -10 = end mark for condition
+    {
+      EndCheck  = 1;
+      TradeMode = 0;
+      continue;
+    } else
+      EndCheck = 0;
+
+    if ( TradeMode == 1)
+      RuleBuyLenTotal++;
+    if ( TradeMode == 2)
+      RuleSellLenTotal++;
+    if ( TradeMode == 3)
+      RuleBuyNextLenTotal++;
+
+    if ( !strcmp("50",str) && TradeMode == 0) // buy
+    {
+      TradeMode = 1;
+      RuleBuyCount++;
+    }
+
+    if ( !strcmp("51",str) && TradeMode == 0) // sell
+    {
+      TradeMode = 2;
+      RuleSellCount++;
+    }
+
+    if ( !strcmp("52",str) && TradeMode == 0) // buy next
+    {
+      TradeMode = 3;
+      RuleBuyNextCount++;
+    }
+  
+  }
+
+ printf("RuleBuyLenT,RuleSellLenT,RuleBuyNextLenT=%d,%d,%d\n",RuleBuyLenTotal,RuleSellLenTotal,RuleBuyNextLenTotal);
+
+  RuleBuyLenTotal += RuleBuyCount;
+  RuleSellLenTotal += RuleSellCount;
+  RuleBuyNextLenTotal += RuleBuyNextCount;
+
+  RuleBuy     = (int *) malloc(RuleBuyLenTotal*sizeof(int));
+  RuleSell    = (int *) malloc(RuleSellLenTotal*sizeof(int));
+  RuleBuyNext = (int *) malloc(RuleBuyNextLenTotal*sizeof(int));
+
+  RuleBuyLen     = (int *) malloc(RuleBuyCount*sizeof(int));
+  RuleSellLen    = (int *) malloc(RuleSellCount*sizeof(int));
+  RuleBuyNextLen = (int *) malloc(RuleBuyNextCount*sizeof(int));
+
+  RuleBuyLenPtr     = RuleBuyLen;
+  RuleSellLenPtr    = RuleSellLen;
+  RuleBuyNextLenPtr = RuleBuyNextLen;
+
+  fseek(fp, 0, SEEK_SET);
+  printf("==========\n");
+
+  while(1)
+  {
+    ReadLine(fp,str);
+
+    if ( !strcmp("end",str) && EndCheck == 1)  // read end twice => EOF
+      break;
+
+    if (!strcmp("end",str))
+    {
+      EndCheck = 1;
+      if ( TradeMode == 1)
+      {
+        printf("RuleBuyLen = %d\n",*RuleBuyLen);
+        RuleBuyLenPtr++;
+      }
+
+      if ( TradeMode == 2)
+      {
+        printf("RuleSellLen = %d\n",*RuleSellLen);        
+        RuleSellLenPtr++;
+      }
+
+      if ( TradeMode == 3)
+      {
+        printf("RuleNextLen = %d\n",*RuleBuyNextLen);        
+        RuleBuyNextLenPtr++;
+      }
+
+      TradeMode = 0;
+      continue;
+    } else
+      EndCheck = 0;
+
+    if ( TradeMode == 1)
+      *RuleBuyLenPtr += 1;
+
+    if ( TradeMode == 2)
+      *RuleSellLenPtr += 1;
+
+    if ( TradeMode == 3)
+      *RuleBuyNextLenPtr += 1;
+
+
+    if ( !strcmp("50",str) && TradeMode == 0) // buy
+    {
+      *RuleBuyLenPtr = 0;
+      TradeMode = 1;
+    }
+    if ( !strcmp("51",str) && TradeMode == 0) // sell
+    {
+      *RuleSellLenPtr = 0;
+      TradeMode = 2;
+    }
+
+    if ( !strcmp("52",str) && TradeMode == 0) // buy next
+    {
+      *RuleBuyNextLenPtr = 0;
+      TradeMode = 3;
+    }
+
+  }
+
+  RuleBuyPtr     = RuleBuy;
+  RuleSellPtr    = RuleSell;
+  RuleBuyNextPtr = RuleBuyNext;
+
+  RuleBuyLenPtr     = RuleBuyLen;
+  RuleSellLenPtr    = RuleSellLen;
+  RuleBuyNextLenPtr = RuleBuyNextLen;
+
+  fseek(fp, 0, SEEK_SET);
+
+  while(1)
+  {
+    ReadLine(fp,str);
+
+    if ( !strcmp("end",str) && EndCheck == 1)  // read end twice => EOF
+      break;
+
+    if (!strcmp("end",str))  // -10 = end mark for condition
+    {
+      EndCheck = 1;
+      TradeMode = 0;
+      continue;
+    } else
+      EndCheck = 0;
+
+    if ( TradeMode == 1)
+    {
+      *RuleBuyPtr = (int)atoi(str);
+      RuleBuyPtr++;
+    }
+    if ( TradeMode == 2)
+    {
+      *RuleSellPtr = (int)atoi(str);
+      RuleSellPtr++;
+    }
+    if ( TradeMode == 3)
+    {
+      *RuleBuyNextPtr = (int)atoi(str); 
+      RuleBuyNextPtr++;
+    }
+
+    if ( !strcmp("50",str) && TradeMode == 0) // buy
+    {
+      *RuleBuyPtr = *RuleBuyLenPtr;
+      RuleBuyPtr++;
+      RuleBuyLenPtr++;
+      TradeMode = 1;
+    }
+    if ( !strcmp("51",str) && TradeMode == 0) // sell
+    {
+      *RuleSellPtr = *RuleSellLenPtr;
+      RuleSellPtr++;
+      RuleSellLenPtr++;
+      TradeMode = 2;
+    }
+
+    if ( !strcmp("52",str) && TradeMode == 0) // buy next
+    {
+      *RuleBuyNextPtr= *RuleBuyNextLenPtr;
+      RuleBuyNextPtr++;
+      RuleBuyNextLenPtr++;
+      TradeMode = 3;
+    }
+
+  }
+
+  fclose(fp);
+
+  printf("BuyRule:\n");
+  for (i = 0; i < RuleBuyLenTotal; i++)
+  {
+    printf("%d\n",*(RuleBuy+i));
+  }
+  printf("SellRule:\n");
+  for (i = 0; i < RuleSellLenTotal; i++)
+  {
+    printf("%d\n",*(RuleSell+i));
+  }
+  printf("BuyNextRule:\n");
+  for (i = 0; i < RuleBuyNextLenTotal; i++)
+  {
+    printf("%d\n",*(RuleBuyNext+i));
+  }
+}
+/*
+// For > < = crossup crsoodown
+void ConditionParsing(int *Rule, int **SplitRet, int **ConditionRet, int len)
+{
+  int *RulePtr;
+  int *Split;
+  int *SplitPtr;
+  int *ConditionList;
+  int i;
+
+  SplitPtr     = (int *) malloc(100*sizeof(int));
+  ConditionRet = (int *) malloc(100*sizeof(int));
+
+  //Find  > < = crossup crsoodown
+  RulePtr++; // Skip shares
+
+  while(i < len)
+  {
+    if ( (*RulePtr >= 20 && *RulePtr <= 24) || *RulePtr == 29 || *RulePtr == 30 )//  > < = crossup crsoodown
+    {
+      if(*RulePtr == 20)
+        *ConditionList = 1;
+      else if(*RulePtr == 21)
+        *ConditionList = 2;
+      else if(*RulePtr == 22)
+        *ConditionList = 3;        
+      else if(*RulePtr == 23)
+        *ConditionList = 4;        
+      else if(*RulePtr == 24)
+        *ConditionList = 5;        
+      else if(*RulePtr == 29)
+        *ConditionList = 6;        
+      else if(*RulePtr == 30)
+        *ConditionList = 7;        
+
+      ConditionList++;
+      SplitPtr++;
+      *SplitPtr = -99;
+    }
+
+    *SplitPtr = *RulePtr;
+
+    RulePtr++;
+    SplitPtr++;
+    i++;
+  }
+
+  SplitPtr++;
+  *SplitPtr = -99;
+
+  *SplitRet = SplitPtr;
+  *ConditionRet = ConditionList;
+}
+
+void AndOrParsing(int *Rule, int **SplitRet, int **AndOrRet, int len)
+{
+  // do first with bracket 
+
+  // split [statement] and [statement]
+  // save each statement to array
+
+  // After finish satement in bracket
+  // then do it all again
+  int *RulePtr;
+  int *Split;
+  int *SplitPtr;
+  int *AndOrList;
+  int i;
+
+  SplitPtr = (int *) malloc(100*sizeof(int));
+  AndOrRet = (int *) malloc(100*sizeof(int));
+
+  i = 0;
+  RulePtr = Rule;
+  SplitPtr = Split;
+
+  //Find And Or
+  RulePtr++; // Skip shares
+
+  while(i < len)
+  {
+    if(*RulePtr == 33 || *RulePtr == 34) // and or
+    {
+      if(*RulePtr == 33)
+        *AndOrList = 1;
+      else
+        *AndOrList = 0;
+
+      AndOrList++;
+      SplitPtr++;
+      *SplitPtr = -99;
+    }
+
+    *SplitPtr = *RulePtr;
+
+    RulePtr++;
+    SplitPtr++;
+    i++;
+  }
+
+  SplitPtr++;
+  *SplitPtr = -99;
+
+  *SplitRet = SplitPtr;
+  *AndOrRet = AndOrList;
+}
+*/
 int main(int argc, char **argv)
 {
   char          *Str;
@@ -414,72 +781,130 @@ int main(int argc, char **argv)
   TRADE_RECORD2 *ReturnRecords2;  
   FILE          *fp;  
   int           ArgIndex;
+  char        *str,*StartDate,*EndDate;
+  int         i;
+
   // 
   // Argument format:
   // StockEmulator.exe [XmlFileName] [Days] -c(ChipAnalysisFlag on)
   //
 
+  //LoadRule();
   MainProcess2();
   Str2 = (char*) malloc(50);
 
   for(ArgIndex = 0; ArgIndex < argc; ArgIndex++)
   {
   	 if(ArgIndex == 1)
-	 {
+	  {
        fp = fopen(argv[1],"r");
        if (fp == NULL) {
 	     printf("open file error!!\n");
 	     return 1;  
        }
-	 }
+	  }
 
-	 if(ArgIndex == 2)
-	 {
-	   Str = argv[2];
+    if(ArgIndex == 2)
+    {
+      StockId = (int)atoi(argv[ArgIndex]); 
+      if(StockId < 0 || StockId > 9999)
+      {
+        printf("Id not correct!\n");
+        return 1;
+      } 
+    }
 
-     *Str2     = *Str;
-     *(Str2+1) = *(Str+1);
-     *(Str2+2) = *(Str+2);
-     *(Str2+3) = *(Str+3);
-     *(Str2+4) = *(Str+4);
-     *(Str2+5) = '\n';
-     StartYear  = atoi(Str2);
+    if(!strcmp("-MA",argv[ArgIndex]))
+    {
+      MA_count = atoi(argv[ArgIndex+1]);
+      MA_value = (int*) malloc(sizeof(int)*MA_count);
+      for(i = 0; i < MA_count; i++)
+      {
+        *(MA_value+i) = atoi( argv[ArgIndex+i +2] );
+        printf("MA, N = %d\n",*(MA_value+i));    
+      }
+    }
 
-     *(Str2+1) = *(Str+5);
-     *(Str2+2) = *(Str+6);
-     *(Str2+3) = '\n';
-     StartMonth = atoi(Str2);
+    if(!strcmp("-KD",argv[ArgIndex]))
+    {
+      KD_count = atoi(argv[ArgIndex+1]);
+      KD_value = (int*) malloc(sizeof(int)*KD_count);
+      for(i = 0; i < KD_count; i++)
+      {
+        *(KD_value+i ) = atoi( argv[ArgIndex+i+2] );
+        printf("KD, RSV_N = %d\n",*(KD_value+i));          
+      }
+    }
 
-     *(Str2+1) = *(Str+7);
-     *(Str2+2) = *(Str+8);
-     *(Str2+3) = '\n';    
-     StartDay   = atoi(Str2);
-	 }
+    if(!strcmp("-RSI",argv[ArgIndex]))
+    {
+      RSI_count = atoi(argv[ArgIndex+1]);
+      RSI_value = (int*) malloc(sizeof(int)*RSI_count);
+      for(i = 0; i < RSI_count; i++)
+      {
+        *(RSI_value+i) = atoi( argv[ArgIndex+i +2] );
+        printf("RSI, RSI_N = %d\n",*(RSI_value+i));
+      }
+    }
 
-  if(ArgIndex == 3)
-	 {
-	   Str = argv[3];
+    if(!strcmp("-MACD",argv[ArgIndex]))
+    {
+      MACD_count = atoi(argv[ArgIndex+1]);
+      MACD_value = (int *)malloc(sizeof(int)*MACD_count*3);
+      for(i = 0; i < MACD_count; i++)
+      {
+        *(MACD_value+i)    = atoi( argv[ArgIndex + i*3 +2] );
+        *(MACD_value+i +1) = atoi( argv[ArgIndex + i*3 +2 +1] );
+        *(MACD_value+i +2) = atoi( argv[ArgIndex + i*3 +2 +2] );
+        printf("MACD, EMA_N1,EMA_N2,DIF_N = %d,%d,%d \n",*(MACD_value+i),*(MACD_value+i+1),*(MACD_value+i+2));
+      }
+    }
+    if(!strcmp("-Range",argv[ArgIndex]))
+    {
+      str = (char*) malloc(50);
 
-     *Str2     = *Str;
-     *(Str2+1) = *(Str+1);
-     *(Str2+2) = *(Str+2);
-     *(Str2+3) = *(Str+3);
-     *(Str2+4) = *(Str+4);
-     *(Str2+5) = '\n';
-     EndYear  = atoi(Str2);
+      StartDate = argv[ArgIndex+1];
+      EndDate   = argv[ArgIndex+2];
+      printf("S=%s,E=%s\n",StartDate,EndDate);
+      //
+      // Read StartDay and EndDay from argument
+      //
+      //Start day
+      //Year
+      *(str)   = *(StartDate);
+      *(str+1) = *(StartDate+1);
+      *(str+2) = *(StartDate+2);
+      *(str+3) = *(StartDate+3);
+      *(str+4) = '\0';
+      StartYear = (int)atoi(str); 
 
-     *(Str2+1) = *(Str+5);
-     *(Str2+2) = *(Str+6);
-     *(Str2+3) = '\n';
-     EndMonth = atoi(Str2);
+      //Month
+      *(str)   = *(StartDate+4);
+      *(str+1) = *(StartDate+5);
+      *(str+2) = '\0';
+      StartMonth = (int)atoi(str);
 
-     *(Str2+1) = *(Str+7);
-     *(Str2+2) = *(Str+8);
-     *(Str2+3) = '\n';    
-     EndDay   = atoi(Str2);     
-	 }
-  
+      //End day
+      //Year
+      *(str)   = *(EndDate);
+      *(str+1) = *(EndDate+1);
+      *(str+2) = *(EndDate+2);
+      *(str+3) = *(EndDate+3);
+      *(str+4) = '\0';
+      EndYear = (int)atoi(str);
+      //Month
+      *(str)   = *(EndDate+4);
+      *(str+1) = *(EndDate+5);
+      *(str+2) = '\0';
+      EndMonth = (int)atoi(str);
+
+      printf("Start = %d-%d , End = %d-%d\n",StartYear,StartMonth,EndYear,EndMonth);
+    }
   }
+
+
+
+
 
   //
   // Init the stock data struct

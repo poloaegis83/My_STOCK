@@ -1,5 +1,8 @@
 #include "DataDefine.h"
 
+#define MoveDayAgoPtr(x)   Sim3Curr -= x;
+#define MoveDayBackPtr(x)  Sim3Curr += x;
+
 typedef struct _Rule_Nodes RuleNodes;
 
 #define Open_Op           1
@@ -54,13 +57,15 @@ void LoadRule();
 void BuildTree(RuleNodes *Root);
 void AddTree(RuleNodes *Root);
 int SplitRule (int *SplitSymbol, int SymbolCount, int *Rule, int **SplitRet, int **SymbolListRet);
-void PrintRule(int *Rule);
+void      PrintRule(int *Rule);
 void CheckLastBracket(int *Rule);
 float Price(int type,int day);
 float MA_(int day);
-float KD_(int *K, int *D, int day);
+void  KD_(float *K, float *D, int day);
 float RSI_(int day);
 float MACD_ (int EMA1day, int EMA2day);
+
+int  StockId;
 
 int  *RuleBuy;
 int  *RuleSell;
@@ -78,34 +83,408 @@ int  RuleBuyCount = 0;
 int  RuleSellCount = 0;
 int  RuleBuyNextCount = 0;
 
+RuleNodes **RootBuyAll;
+RuleNodes **RootSellAll;
+RuleNodes **RootBuyNextAll;
 
-float Price(int type,int day)
+char  *TechDataName;
+
+void InitTechDataName()
+{
+  int   i;
+  char  *str;
+
+  TechDataName = (char *)malloc(50);
+
+  TechDataName = "TechResult";
+
+  i = 0;
+  while(1)
+  {
+    if ( *(TechDataName+i) == '\0' )
+    {
+      str = TechDataName+i;
+    }
+    i++;
+  }
+
+  _itoa(StockId,str,10);  
+}
+
+void ReadLine(FILE *fp,char *str)
+{
+  fscanf(fp,"%s",str);
+}
+
+float Price(char *type,int day)
 {
   float Ret;
+  MoveDayAgoPtr(day)
+  if(!strcmp("Open",type))
+    Ret = Sim3Curr->Start;
+  else if (!strcmp("High",type))
+    Ret = Sim3Curr->High;
+  else if (!strcmp("Low",type))
+    Ret = Sim3Curr->Low;
+  else if (!strcmp("Close",type))
+    Ret = Sim3Curr->End;
+  MoveDayBackPtr(day)
   return Ret;
 }
 
 float MA_(int day)
 {
   float Ret;
+  char  *str;
+  FILE  *fp;
+  int i,j,CountNum;
+  int match;
+  int length;
+  int Counter;
+
+  str = (char *)malloc(50);
+
+  match   = 0;
+  Counter = 0;
+
+  fp = fopen(TechDataName,"r");
+
+  while(1)
+  {
+    ReadLine(fp,str);
+
+    if(match == 3)
+    {
+      Counter++;
+    }
+
+    if(match == 1)
+    {
+      length = (int)_atoi(str);
+      match = 2;
+    }
+    if(!strcmp("MA",str))
+    {
+      match = 3;
+    }
+    if(!strcmp("length",str))
+    {
+      match = 1;
+    }
+
+    if (Counter % length == 0  && Counter/length == CountNum)
+    {
+      match = 4;
+    }
+    if  (Counter % length == Sim3Curr->DayIndex && match == 4)
+    {
+      printf("find\n");
+      Ret = (float)atof(str);
+      match = 0;
+      break;
+    }
+  }
+
+  fclose(fp);
+
   return Ret;
 }
 
-float KD_(int *K, int *D, int day)
+void KD_(float *K, float *D, int day)
 {
-  float Ret;
-  return Ret;
+  char  *str,*str1;
+  FILE  *fp;
+  int i,j,CountNum;
+  int match;
+  int length;
+  int Counter;
+
+  str = (char *)malloc(50);
+  str1 = (char *)malloc(20);
+
+  for(i = 0; i < MA_count; i++)
+  {
+    if(*(MA_value+i) == day)
+    {
+      CountNum = i;
+    }
+  }
+
+  match   = 0;
+  Counter = 0;
+
+  fp = fopen(TechDataName,"r");
+  while(1)
+  {
+    ReadLine(fp,str);
+
+    if(match == 3)
+    {
+      Counter++;
+    }
+
+    if(match == 1)
+    {
+      length = (int)_atoi(str);
+      match = 2;
+    }
+    if(!strcmp("KD",str))
+    {
+      match = 3;
+    }
+    if(!strcmp("length",str))
+    {
+      match = 1;
+    }
+
+    if (Counter % length == 0  && Counter/length == CountNum)
+    {
+      match = 4;
+    }
+    if  (Counter % length == Sim3Curr->DayIndex && match == 4)
+    {
+      printf("find\n");
+      // Cutting string with ','
+      j = 0;
+      while(1)
+      {
+        if(*(str+j) == ',')
+        {
+          str1 = str+j;
+          *D   = (float)atof(str1+1);
+          *(str+j) = '\0';
+          *K   = (float)atof(str);
+        }
+      }
+      //(float)atof(str);
+      match = 0;
+      break;
+    }
+
+  }
+
+  fclose(fp);
+
 }
 
 float RSI_(int day)
 {
   float Ret;
+  char  *str;
+  FILE  *fp;
+  int i,CountNum;
+  int match;
+  int length;
+  int Counter;
+
+  str = (char *)malloc(50);
+
+  for(i = 0; i < MA_count; i++)
+  {
+    if(*(MA_value+i) == day)
+    {
+      CountNum = i;
+    }
+  }
+
+  match   = 0;
+  Counter = 0;
+
+  fp = fopen(TechDataName,"r");
+  while(1)
+  {
+    ReadLine(fp,str);
+
+    if(match == 3)
+    {
+      Counter++;
+    }
+
+    if(match == 1)
+    {
+      length = (int)_atoi(str);
+      match = 2;
+    }
+    if(!strcmp("RSI",str))
+    {
+      match = 3;
+    }
+    if(!strcmp("length",str))
+    {
+      match = 1;
+    }
+
+    if (Counter % length == 0  && Counter/length == CountNum)
+    {
+      match = 4;
+    }
+    if  (Counter % length == Sim3Curr->DayIndex && match == 4)
+    {
+      printf("find\n");
+      Ret = (float)atof(str);
+      match = 0;
+      break;
+    }
+
+  }
+
+  fclose(fp);
+
   return Ret;
 }
 
 float MACD_(int EMA1day, int EMA2day)
 {
   float Ret;
+  return Ret;
+}
+
+void Buy(char *Type, int Shares)
+{
+  BuyOrSell(1,Type,Shares);
+}
+
+void Sell(char *Type, int Shares)
+{
+  BuyOrSell(0,Type,Shares);
+}
+
+void BuyOrSell(char Options, char *Type, int Shares)
+{
+  TRADE_RECORD2  *Record;
+  float Price;
+  int   DayIndex;
+  DATE  Dates;
+
+  if(!strcmp("Now",Type))
+  {
+    Price    = PRICE();
+    printf("price = %f\n",Price);
+    DayIndex = Sim3Curr->DayIndex;
+    Dates    = Sim3Curr->Dates;    
+  }
+  if(!strcmp("BuyNext",Type))
+  {
+    Price    = (Sim3Curr+1)->Start;
+    DayIndex = (Sim3Curr+1)->DayIndex;
+    Dates    = (Sim3Curr+1)->Dates;       
+  }
+
+
+  if (Record2Head == NULL)
+  {
+    if(Options) //Block sell with no shares remain
+    {
+      Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
+      Record->Price    = Price;
+      Record->DayIndex = DayIndex;
+      Record->Dates     = Dates; 
+
+      Record->BuyOrSell = 1;
+      Record->ShareTrades = Shares;  
+      Record->SharesRemaining = Shares;
+      Record->Next     = NULL;
+      Record2Head    = Record;
+      Record2Current = Record;      
+    }
+    return;
+  }
+
+  if(!Options) //Block sell with no shares remain
+  {
+    if(Record2Current->SharesRemaining < Shares)
+    {
+      // Shares remain not enough
+      return;
+    }
+  } else  //Block buy with shares remain
+  {
+    if(Record2Current->SharesRemaining != 0)
+    {
+      // Shares remains
+      return;
+    }
+  }
+
+  Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
+
+  Record->Price    = Price;
+  Record->DayIndex = DayIndex;
+  Record->Dates    = Dates; 
+
+  Record->BuyOrSell = Options ? 1 : 0;
+  Record->ShareTrades = Shares;
+  Record->Next     = NULL;
+
+
+  if(Options)
+  {
+  Record->SharesRemaining = Record2Current->SharesRemaining + Shares;
+  } else
+  {
+  Record->SharesRemaining = Record2Current->SharesRemaining - Shares;
+  }
+
+  Record2Current->Next = Record;
+  Record2Current = Record;
+}
+
+float HandleFunctionItem(int *Rule)
+{
+  int   i;
+  int   op;
+  int   op_value;
+  int   op2;
+  int   op2_value;
+  int   *NewRule;
+  float Ret;
+  float Highest;
+  float Lowest;
+
+  NewRule = (int *) malloc(5);
+
+  Ret = 0;
+  Highest = Ret;
+  Lowest  = Ret;
+
+  op        = *(Rule+1);
+  op_value  = *(Rule+2);
+  op2       = *(Rule+3);
+  op2_value = *(Rule+4);
+
+  *NewRule     = *Rule -2;  // length - 2
+  *(NewRule+1) = op2;
+  *(NewRule+2) = op2_value;
+
+  for (i = 0; i < op_value; i++)
+  {
+    MoveDayAgoPtr(i)
+
+    if (op == Sum_function || Average_function)
+      Ret += CalRule(NewRule);
+
+    if (op == Highest_function)
+    {
+      Ret = CalRule(NewRule);
+      if (Ret > Highest)
+        Highest = Ret;
+    }
+
+    if (op == Lowest_function)
+    {
+      Ret = CalRule(NewRule);
+      if (Ret < Lowest)
+        Lowest = Ret;
+    }
+
+    MoveDayBackPtr(i)
+  }
+
+  if (op == Average_function)
+    Ret /= op_value;
+
+  free(NewRule);
+
   return Ret;
 }
 
@@ -123,7 +502,6 @@ void TraceNode(RuleNodes *Root)
   for( i = 0; i < NumChild; i++ )
   {
     printf("To Child = %x\n",*(Root->Child+i));
-
     TraceNode(*(Root->Child+i));
   }
 }
@@ -135,15 +513,10 @@ float GetVaule(int *Rule)
   int op_value;
   int op2;
   int op2_value;
+  float K,D;
 
-  op = *Rule;
-
-  if(op == Lowest_function || op == Highest_function  || op == Average_function  || op == Sum_function )
-  {
-    op_value  = *(Rule+1);
-    op2       = *(Rule+2);
-    op2_value = *(Rule+3);
-  }
+  op = *Rule+1;
+  op_value  = *(Rule+2);
 
   if (op == Open_Op || op == High_Op || op == Low_Op || op == Close_Op)
   {
@@ -154,30 +527,16 @@ float GetVaule(int *Rule)
   } else if (op == RSI_Op)
   {
     Ret = RSI(op_value);    
-  } else if (op == KD_K_Op)
+  } else if (op == KD_K_Op || op == KD_D_Op)
   {
-    //Ret = KD(op_value);    
-  } else if (op == KD_D_Op)
-  {
-    //Ret = KD(op_value);    
+    KD_(&K,&D,op_value);    
+    Ret = (op == KD_K_Op) ? K:D;
   }  else if (op == MACD_Op)
   {
-    Ret = MACD(op, op_value);    
-  } else if (op == Sum_function)
+    //Ret = MACD_(op, op_value);    
+  } else if(op == Lowest_function || op == Highest_function  || op == Average_function  || op == Sum_function )
   {
-    
-  } else if (op == Lowest_function)
-  {
-
-  } else if (op == Highest_function)
-  {
-    
-  } else if (op == Average_function)
-  {
-    
-  } else if (op == Sum_function)
-  {
-    
+    Ret = HandleFunctionItem(Rule);
   }
 
   return Ret;
@@ -200,25 +559,103 @@ float CalRule(RuleNodes *Root)
 
   for (i= 1; i < ChildC ; i++)
   { 
-    for (j = 0; j < ChildC; j++)
+    op = *(Root->SymbolList+i-1); // [Child1] symbol1(op) [Child2] symbol2 [Child3] ....
+    if(op == Plus_Op)
     {
-      op = *(Root->SymbolList+j);
-      if(op == Plus_Op)
+      value += CalRule(*(Root->Child+i));
+    }
+    else if (op == Sub_Op)
+    {
+      value -= CalRule(*(Root->Child+i));
+    }
+    else if (op == Multi_Op)
+    {
+      value *= CalRule(*(Root->Child+i));
+    }
+    else if (op == Divide_Op)
+    {
+      value /= CalRule(*(Root->Child+i));
+    }
+
+    if(op == Bigger_Op)
+    {
+      if ( CalRule(*(Root->Child+i-1)) > CalRule(*(Root->Child+i)) )
       {
-        value += CalRule(*(Root->Child+i));
-      }
-      else if (op == Sub_Op)
+        value = 1; //True
+      } else
       {
-        value -= CalRule(*(Root->Child+i));
+        value = 0;
       }
-      else if (op == Multi_Op)
+    } else if(op == Smaller_Op)
+    {
+      if ( CalRule(*(Root->Child+i-1)) < CalRule(*(Root->Child+i)) )
       {
-        value *= CalRule(*(Root->Child+i));
-      }
-      else if (op == Divide_Op)
+        value = 1; //True
+      } else
       {
-        value /= CalRule(*(Root->Child+i));
+        value = 0;
       }
+    } else if(op == Equal_Bigger_Op)
+    {
+      if ( CalRule(*(Root->Child+i-1)) >= CalRule(*(Root->Child+i)) )
+      {
+        value = 1; //True
+      } else
+      {
+        value = 0;
+      }
+    }else if(op == Equal_Smaller_Op)
+    {
+      if ( CalRule(*(Root->Child+i-1)) <= CalRule(*(Root->Child+i)) )
+      {
+        value = 1; //True
+      } else
+      {
+        value = 0;
+      }
+    } else if(op == Equal_Op)
+    {
+      if ( CalRule(*(Root->Child+i-1)) == CalRule(*(Root->Child+i)) )
+      {
+        value = 1; //True
+      } else
+      {
+        value = 0;
+      }
+    } else if(op == CrossUp_Op)
+    {
+      // Assign False at first 
+      value = 0;
+      MoveDayAgoPtr(1)
+      if ( CalRule(*(Root->Child+i-1)) < CalRule(*(Root->Child+i)) )  // left op < right op
+      {
+        MoveDayBackPtr(1)
+        if ( CalRule(*(Root->Child+i-1)) > CalRule(*(Root->Child+i)) ) // left op > right op
+          {
+            value = 1; //True
+          }
+      }
+    } else if(op == CrossDown_Op)
+    {
+      // Assign False at first
+      value = 0;
+      MoveDayAgoPtr(1)
+      if ( CalRule(*(Root->Child+i-1)) > CalRule(*(Root->Child+i)) )  // left op > right op
+      {
+        MoveDayBackPtr(1)
+        if ( CalRule(*(Root->Child+i-1)) < CalRule(*(Root->Child+i)) )  // left op < right op
+          {
+            value = 1;  //True
+          }
+      }
+    }
+
+    if (op == And_Op)
+    {
+      value = (int)value & (int)(CalRule(*(Root->Child+i)));
+    } else if (op == Or_Op)
+    {
+      value = (int)value | (int)(CalRule(*(Root->Child+i)));
     }
   }
 
@@ -303,10 +740,6 @@ void MainProcess2()
   int *RuleBuyNextPtr;
   int i,j,k;
   int len;
-
-  RuleNodes **RootBuyAll;
-  RuleNodes **RootSellAll;
-  RuleNodes **RootBuyNextAll;
 
   RuleNodes **RootBuyAllPtr;
   RuleNodes **RootSellAllPtr;
@@ -907,11 +1340,6 @@ void CheckLastBracket(int *Rule)
 
 }
 
-void HandleFunctionItem(int *Rule)
-{
-
-}
-
 // Return bracket detect
 int SplitRule (int *SplitSymbol, int SymbolCount, int *Rule, int **SplitRet, int **SymbolListRet)
 {
@@ -1175,12 +1603,45 @@ void AndOrParsing(int *Rule, int **SplitRet, int **AndOrRet, int len)
 
 void TradeRule2()
 {
+  int i;
+  int shares;
 
+  for (i = 0; i < RuleBuyCount; i++)
+  {
+    if (CalRule(*(RootBuyAll+i)))
+    {
+      //Buy
+      shares = (*(RootBuyAll+i))->shares;
+      Buy("Now",shares);
+    }
+  }
+
+  for (i = 0; i < RuleSellCount; i++)
+  {
+    if (CalRule(*(RootSellAll+i)))
+    {
+      //Sell
+      shares = (*(RootBuyAll+i))->shares;
+      Sell("Now",shares);
+    }
+  }
+
+  for (i = 0; i < RuleBuyNextCount; i++)
+  {
+    if (CalRule(*(RootBuyNextAll+i)))
+    {
+      //BuyNext
+      shares = (*(RootBuyAll+i))->shares;
+      Buy("BuyNext",shares);
+    }
+  }
 }
 
 void StockSimulator3(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecords2Head)
 {
   int         Current;
+
+  InitTechDataName();
 
   for(Current = StartDayIndex; Current <= EndDayIndex; Current++)
   {
