@@ -372,51 +372,38 @@ def GenResult(PlotByYear,ID):
         BarDiffT_H.clear()
         colors.clear()
 
-f = open("IDList.txt", mode='r')
-IDList = []
-while 1:
-    ID = f.read(4)
-    IDList.append(ID)
-    ID = f.read(1)
-    if ID != ",":
-        break
-f.close()
 
+def StartSimulation(Cmd,StockID):
+    
+    IDList = []
+    os.system("rmdir Result /s /q")
+    os.system("mkdir Result")
 
-#stock_id = input ("請輸入股票代碼: ")
+    f = open("IDList.txt", mode='r')
 
-InputStart = input ("請輸入起始年月 (ex:201911): ")
-InputEnd = input ("請輸入結束年月(ex:202101): ")
-os.system("rmdir Result /s /q")
-os.system("mkdir Result")
+    Filename = "History"+StockID+"_201301_202012"
 
-for ID_LIST in IDList:
-    print("ID:",ID_LIST)
-    os.system("del Result"+ID_LIST)
+    while 1:
+        ID = f.read(4)
+        IDList.append(ID)
+        ID = f.read(1)
+        if ID != ",":
+            break
 
-for ID_LIST in IDList:
-    GetData(ID_LIST,InputStart,InputEnd)
-    os.system("StockEmulator.exe ""data"+ID_LIST+".xml "+str(TotalDay-61))
-    print("Total Days = ",TotalDay)
+    f.close()
 
-    PlotByYear = SplitYearData()
-    GenResult(PlotByYear,ID_LIST)
-    PlotDataX.clear()
-    PlotDataYO.clear()
-    PlotDataYC.clear()
-    PlotDataYH.clear()
-    PlotDataYL.clear()
+    for ID_LIST in IDList:
+        print("ID:",ID_LIST)
+        os.system("del Result"+ID_LIST)
 
+    for ID_LIST in IDList:
+        SimStr = "CalculateData.exe "+Filename+" "+ID_LIST+Cmd
+        os.system(SimStr)
 
-FetchHistoryData("2330","2019","2020")
-
-#FetchHistoryData("2330","2018","2020")
-
-#for AllX,AllY in PlotDataX,PlotDataY:
-#    plt.plot(AllX,AllY)
-#    plt.show()
-#plt.plot(PlotDataX,PlotDataY,":")
-#plt.show()
-
-
-#f.close()
+        PlotByYear = SplitYearData()
+        GenResult(PlotByYear,ID_LIST)
+        PlotDataX.clear()
+        PlotDataYO.clear()
+        PlotDataYC.clear()
+        PlotDataYH.clear()
+        PlotDataYL.clear()

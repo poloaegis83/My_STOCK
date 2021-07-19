@@ -86,19 +86,6 @@ struct _DailyInfo {
 };
 
 struct _Trade_Record {
-  int       BuyDayIndex;
-  int       SellDayIndex;
-
-  float       BuyPrice;
-  float       SellPrice;
-
-  DATE          BuyDates;
-  DATE          SellDates;
-
-  TRADE_RECORD  *Next;
-};
-
-struct _Trade_Record2 {
   int       DayIndex;
   int       BuyOrSell;  /* 1 = buy, 0 = sell */
   float     Price;
@@ -106,33 +93,24 @@ struct _Trade_Record2 {
   int       SharesRemaining;
   DATE      Dates;
 
-  TRADE_RECORD2  *Next;
+  TRADE_RECORD  *Next;
 };
 
 extern DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
-extern char DebugFlag;
 
 //
-// Emulator 1
+// Emulator
 //
-extern int         ChipAnalysisFlag; /*Featrue*/
-extern float       MA5_Over_MA10;
+extern TRADE_RECORD  *RecordHead;
+extern TRADE_RECORD  *RecordCurrent;
 
-void StockSimulator1 (int StartDayIndex, int EndDayIndex, TRADE_RECORD **ReturnRecordsHead);
-void AnalysisProfit (TRADE_RECORD  *TradeRecords);
-
-//
-// Emulator 2
-//
-extern char   OpenOrClose;
-extern TRADE_RECORD2  *Record2Head;
-extern TRADE_RECORD2  *Record2Current;
-
-void StockSimulator2(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecordsHead);
-void AnalysisProfit2 (TRADE_RECORD2  *TradeRecords2);
+void StockSimulator(int StartDayIndex, int EndDayIndex, TRADE_RECORD  **ReturnRecordsHead);
+void AnalysisProfit (TRADE_RECORD  *TradeRecords2);
+void  ReadLine(FILE *fp,char *str);
+//int   FindTotalLen(FILE *fp);
 
 void LoadRule();
-void MainProcess2();
+void MainProcess();
 
 extern int         *MA_value;
 extern int         MA_count;

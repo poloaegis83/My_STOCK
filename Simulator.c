@@ -23,8 +23,13 @@
                                     fputs("\n",fp);
 
 
-#define MoveDayAgoPtr(x)   SimCurr -= x;
-#define MoveDayBackPtr(x)  SimCurr += x;
+
+#define MoveDayAgoPtr(x)   SimCurr -= x;\
+                           ShiftDay = x;
+
+#define MoveDayBackPtr     SimCurr += ShiftDay;
+
+int ShiftDay;
 
 typedef struct _Rule_Nodes RuleNodes;
 
@@ -63,6 +68,8 @@ typedef struct _Rule_Nodes RuleNodes;
 TRADE_RECORD  *RecordHead;
 TRADE_RECORD  *RecordCurrent;
 
+int         Current;
+
 struct _Rule_Nodes
 {
   int    shares; // root only
@@ -79,18 +86,18 @@ struct _Rule_Nodes
 
 DAILY_INFO *SimCurr;
 
-void LoadRule();
-void BuildTree(RuleNodes *Root);
-void AddTree(RuleNodes *Root);
-int SplitRule (int *SplitSymbol, int SymbolCount, int *Rule, int **SplitRet, int **SymbolListRet);
-void      PrintRule(int *Rule);
-void CheckLastBracket(int *Rule);
+void  LoadRule();
+void  BuildTree(RuleNodes *Root);
+void  AddTree(RuleNodes *Root);
+int   SplitRule (int *SplitSymbol, int SymbolCount, int *Rule, int **SplitRet, int **SymbolListRet);
+void  PrintRule(int *Rule);
+void  CheckLastBracket(int *Rule);
 float Price(char *type,int day);
-float MA_(int day);
-void  KD_(float *K, float *D, int day);
-float RSI_(int day);
-float MACD_ (int EMA1day, int EMA2day);
-void BuyOrSell(char Options, char *Type, int Shares);
+float MA(int day);
+void  KD(float *K, float *D, int day);
+float RSI(int day);
+float MACD(int EMA1day, int EMA2day);
+void  BuyOrSell(char Options, char *Type, int Shares);
 
 int  StockId;
 
@@ -138,8 +145,6 @@ void InitTechDataName()
 
   _itoa(StockId,str,10);  
 }
-
-
 
 /***
  To prevet date number string like "2020/1/1"
@@ -274,7 +279,7 @@ float Price(char *type,int day)
     Ret = SimCurr->Low;
   else if (!strcmp("Close",type))
     Ret = SimCurr->End;
-  MoveDayBackPtr(day)
+  MoveDayBackPtr
   return Ret;
 }
 
@@ -324,6 +329,7 @@ float MA(int day)
     {
       match = 4;
     }
+
     if  (Counter % length == SimCurr->DayIndex && match == 4)
     {
       printf("find\n");
@@ -625,7 +631,7 @@ float HandleFunctionItem(int *Rule)
         Lowest = Ret;
     }
 
-    MoveDayBackPtr(i)
+    MoveDayBackPtr
   }
 
   if (op == Average_function)
@@ -708,6 +714,7 @@ float CalRule(RuleNodes *Root)
   for (i= 1; i < ChildC ; i++)
   { 
     op = *(Root->SymbolList+i-1); // [Child1] symbol1(op) [Child2] symbol2 [Child3] ....
+
     if(op == Plus_Op)
     {
       value += CalRule(*(Root->Child+i));
@@ -777,7 +784,7 @@ float CalRule(RuleNodes *Root)
       MoveDayAgoPtr(1)
       if ( CalRule(*(Root->Child+i-1)) < CalRule(*(Root->Child+i)) )  // left op < right op
       {
-        MoveDayBackPtr(1)
+        MoveDayBackPtr
         if ( CalRule(*(Root->Child+i-1)) > CalRule(*(Root->Child+i)) ) // left op > right op
           {
             value = 1; //True
@@ -790,7 +797,7 @@ float CalRule(RuleNodes *Root)
       MoveDayAgoPtr(1)
       if ( CalRule(*(Root->Child+i-1)) > CalRule(*(Root->Child+i)) )  // left op > right op
       {
-        MoveDayBackPtr(1)
+        MoveDayBackPtr
         if ( CalRule(*(Root->Child+i-1)) < CalRule(*(Root->Child+i)) )  // left op < right op
           {
             value = 1;  //True
@@ -938,9 +945,9 @@ void MainProcess()
     RootBuyAllPtr++;
     j++;
   }
-printf("\n\n\n ");
+  printf("\n\n\n ");
   TraceNode(RootBuy);
-printf("\n\n\n ");
+  printf("\n\n\n ");
   j = 0;
   while(j < RuleSellCount)
   {
@@ -973,13 +980,13 @@ printf("\n\n\n ");
     j++;
     TraceNode(RootSell);
   }
-printf("\n\n\n ");
+  printf("\n\n\n ");
   for(j = 0; j < RuleBuyCount; j++)
   {
    // TraceNode(*(RootSellAllPtr+i));
   }
 
-printf("\n\n\n ");  
+  printf("\n\n\n ");  
     //calloc(100,sizeof(int));
   j = 0;
   while(j < RuleBuyNextCount)
@@ -1256,21 +1263,18 @@ void BuildTree(RuleNodes *Root)
 
   printf("\nbuild tree Root:\n");
   PrintRule(Root->Rule);
-  //calloc(100,sizeof(int));
-  //if (Root->Levels == 4)
-  //  return;
-  //printf("add tree build tree\n");
+
   AddTree(Root);
 
   ChildC = Root->ChildCount;
-  //calloc(100,sizeof(int));
+
   // scan all the child
   for(i = 0; i < ChildC; i++)
   {
     printf("\nbuild child(%d) of root\n",i);
     ChildN = *(Root->Child + i);
-    //if(ChildN->Levels != 4)
-      BuildTree(ChildN);
+
+    BuildTree(ChildN);
     printf("build child(%d) done\n\n",i);
   }
 
@@ -1354,26 +1358,9 @@ void AddTree(RuleNodes *Root)
   
   Rule = Root->Rule;
   level = Root->Levels;
-  //a();
-  ChildNum = 0;
-  //printf("add tree1.1\n");
-//calloc(100,sizeof(int));
-  //SplitBuffer   = (int *) calloc(100,sizeof(int));
-  //SymbolBuffer  = (int *) calloc(100,sizeof(int));
-//printf("add tree2.1\n");
-/*
-  if (level == 1)
-  {
-    SplitRule(AndOr,sizeof(AndOr)/AndOr[0],Rule,&SplitBuffer,&SymbolBuffer);
-  } else if (level == 2)
-  {
-    SplitRule(Condition,sizeof(Condition)/Condition[0],Rule,&SplitBuffer,&SymbolBuffer);
-  } else if (level == 3)
-  {
-    SplitRule(Operater,sizeof(Operater)/Operater[0],Rule,&SplitBuffer,&SymbolBuffer);
-  }*/
 
-  //printf("add tree2\n");
+  ChildNum = 0;
+
   SplitRule(AndOr,2,Rule,&SplitBuffer,&SymbolBuffer);
   if (*SymbolBuffer == 0)
     SplitRule(Condition,7,Rule,&SplitBuffer,&SymbolBuffer);
@@ -1613,142 +1600,6 @@ int SplitRule (int *SplitSymbol, int SymbolCount, int *Rule, int **SplitRet, int
   return IsBracketDetect;
 }
 
-/*
-void OperationParsing(int *Rule, int **SplitRet, int **OperationRet, int len)
-{
-  // do '+' '-' first , split by + -
-  int   *RulePtr;
-  int   *mark;
-  int i;
-
-  i = 0;
-  while(i < len)
-  {
-
-    if(*RulePtr == 25)
-    {
-
-    } else if(*RulePtr == 26)
-    {
-
-    }
-    // mark and find i-1 i+1
-
-    RulePtr++;
-    i++;
-  }
-  
-}
-
-// For > < = crossup crsoodown
-void ConditionParsing(int *Rule, int **SplitRet, int **ConditionRet, int len)
-{
-  int *RulePtr;
-  int *Split;
-  int *SplitPtr;
-  int *ConditionList;
-  int i;
-
-  i = 0;
-  RulePtr = Rule;
-  SplitPtr     = (int *) malloc(100*sizeof(int));
-  ConditionRet = (int *) malloc(100*sizeof(int));
-
-  //Find  > < = crossup crsoodown
-  RulePtr++; // Skip shares
-
-  while(i < len)
-  {
-    if ( (*RulePtr >= 20 && *RulePtr <= 24) || *RulePtr == 29 || *RulePtr == 30 )//  > < = crossup crsoodown
-    {
-      if(*RulePtr == 20)
-        *ConditionList = 1;
-      else if(*RulePtr == 21)
-        *ConditionList = 2;
-      else if(*RulePtr == 22)
-        *ConditionList = 3;        
-      else if(*RulePtr == 23)
-        *ConditionList = 4;        
-      else if(*RulePtr == 24)
-        *ConditionList = 5;        
-      else if(*RulePtr == 29)
-        *ConditionList = 6;        
-      else if(*RulePtr == 30)
-        *ConditionList = 7;        
-
-      ConditionList++;
-      SplitPtr++;
-      *SplitPtr = -99;
-    }
-
-    *SplitPtr = *RulePtr;
-
-    RulePtr++;
-    SplitPtr++;
-    i++;
-  }
-
-  SplitPtr++;
-  *SplitPtr = -99;
-
-  *SplitRet = SplitPtr;
-  *ConditionRet = ConditionList;
-}
-
-void AndOrParsing(int *Rule, int **SplitRet, int **AndOrRet, int len)
-{
-  // do first with bracket 
-
-  // split [statement] and [statement]
-  // save each statement to array
-
-  // After finish satement in bracket
-  // then do it all again
-  int *RulePtr;
-  int *Split;
-  int *SplitPtr;
-  int *AndOrList;
-  int i;
-
-  Split    = (int *) malloc(100*sizeof(int));
-  AndOrRet = (int *) malloc(100*sizeof(int));
-
-  i = 0;
-  RulePtr = Rule;
-  SplitPtr = Split;
-
-  //Find And Or
-  RulePtr++; // Skip shares
-
-  while(i < len)
-  {
-    if(*RulePtr == 33 || *RulePtr == 34) // and or
-    {
-      if(*RulePtr == 33)
-        *AndOrList = 1;
-      else
-        *AndOrList = 0;
-
-      AndOrList++;
-      SplitPtr++;
-      *SplitPtr = -99;
-    }
-
-    *SplitPtr = *RulePtr;
-
-    RulePtr++;
-    SplitPtr++;
-    i++;
-  }
-
-  SplitPtr++;
-  *SplitPtr = -99;
-
-  *SplitRet = SplitPtr;
-  *AndOrRet = AndOrList;
-}
-*/
-
 void TradeRule()
 {
   int i;
@@ -1899,7 +1750,7 @@ void AnalysisProfit (TRADE_RECORD *TradeRecords)
 
 void StockSimulator(int StartDayIndex, int EndDayIndex, TRADE_RECORD  **ReturnRecordsHead)
 {
-  int         Current;
+  Current   = 0;
 
   InitTechDataName();
 

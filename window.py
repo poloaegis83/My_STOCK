@@ -4,6 +4,7 @@ import shutil
 from tkinter import filedialog
 from FetchData import FetchHistoryData
 import os
+from main import StartSimulation
 
 ConditionListAll = []
 ConditionList = []
@@ -823,18 +824,22 @@ def Run():     # check rule, and prepare which item needed
 
     f.close()
 
+    SimStr     = CalItemList+" -Range "+YearStart+" "+YearEnd 
+
     for StockID in IDList:
         # Check calculate data filename
         Filename = "History"+StockID+"_201301_202012"
-
+        
+        # prepare data
         CalDataStr = "CalculateData.exe "+Filename+" "+StockID+CalItemList+" -Range "+YearStart+" "+YearEnd
-        print(CalDataStr)
 
+        print(CalDataStr)
+        print(SimStr)
         # Call format: CalculateData.exe [filename] [Stock Id] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] ...
         #os.system(CalDataStr)  #call CalculateData to preare data
     
     # After parepare data, then call simulator through main.py
-
+    #StartSimulation(SimStr,StockID)
 
 f = open("IDList.txt", mode='r')
 IDList = []
