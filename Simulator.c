@@ -1,7 +1,30 @@
 #include "DataDefine.h"
 
-#define MoveDayAgoPtr(x)   Sim3Curr -= x;
-#define MoveDayBackPtr(x)  Sim3Curr += x;
+#define WriteDates(x,y,z,str,fp)  _itoa(x,str,10);\
+                                  fputs(str,fp);\
+                                  fputs("/",fp);\
+                                  _itoa(y,str,10);\
+                                  InsertZeroForDate(str);\
+                                  fputs(str,fp);\
+                                  fputs("/",fp);\
+                                  _itoa(z,str,10);\
+                                  InsertZeroForDate(str);\
+                                  fputs(str,fp);\
+                                  fputs("\n",fp);
+
+#define WriteNum(x,str,fp)        _itoa(x,str,10);\
+                                  fputs(str,fp);\
+                                  fputs("\n",fp);
+
+#define WriteFloatNum(x,str,fp)     FixPoint2(x);\
+                                    gcvt(x,6,str);\
+                                    CheckFloatString(str);\
+                                    fputs(str,fp);\
+                                    fputs("\n",fp);
+
+
+#define MoveDayAgoPtr(x)   SimCurr -= x;
+#define MoveDayBackPtr(x)  SimCurr += x;
 
 typedef struct _Rule_Nodes RuleNodes;
 
@@ -37,6 +60,9 @@ typedef struct _Rule_Nodes RuleNodes;
 #define Average_function  42
 #define Sum_function      43
 
+TRADE_RECORD  *RecordHead;
+TRADE_RECORD  *RecordCurrent;
+
 struct _Rule_Nodes
 {
   int    shares; // root only
@@ -51,7 +77,7 @@ struct _Rule_Nodes
 
 };
 
-DAILY_INFO *Sim3Curr;
+DAILY_INFO *SimCurr;
 
 void LoadRule();
 void BuildTree(RuleNodes *Root);
@@ -59,11 +85,12 @@ void AddTree(RuleNodes *Root);
 int SplitRule (int *SplitSymbol, int SymbolCount, int *Rule, int **SplitRet, int **SymbolListRet);
 void      PrintRule(int *Rule);
 void CheckLastBracket(int *Rule);
-float Price(int type,int day);
+float Price(char *type,int day);
 float MA_(int day);
 void  KD_(float *K, float *D, int day);
 float RSI_(int day);
 float MACD_ (int EMA1day, int EMA2day);
+void BuyOrSell(char Options, char *Type, int Shares);
 
 int  StockId;
 
@@ -88,6 +115,7 @@ RuleNodes **RootSellAll;
 RuleNodes **RootBuyNextAll;
 
 char  *TechDataName;
+int     FixFlag;
 
 void InitTechDataName()
 {
@@ -111,6 +139,124 @@ void InitTechDataName()
   _itoa(StockId,str,10);  
 }
 
+
+
+/***
+ To prevet date number string like "2020/1/1"
+ should be "2020/01/01"
+***/
+void InsertZeroForDate(char *Dates)
+{
+  char Val;
+  if(*(Dates+1) == '\0') // if single number
+  {
+    Val = *(Dates);
+    *(Dates)   = '0';
+    *(Dates+1) = Val;
+    *(Dates+2) = '\0';
+  }
+}
+
+/***
+ To prevet scientific notation leads gcvt error
+ ex: 0.04 can casue error
+***/
+void FixPoint2(float Num)
+{
+  if (Num < 0.1 && Num > 0)
+    FixFlag = 1;
+  else if (Num > -0.1 && Num < 0 )
+    FixFlag = 2;
+  else
+    FixFlag = 0;  
+}
+
+
+/***
+ To prevet float number string like "200."
+ should be "200.0"
+***/
+void CheckFloatString(char *Num)
+{
+  int i;
+  char TheLastIsPoint = 0;
+  char IsPoint = 0;
+
+  i = 0;
+
+  while(*(Num+i) != '\0')
+  {
+    TheLastIsPoint = 0;
+    if ( *(Num+i) == '.')
+    {
+      TheLastIsPoint = 1;
+    }
+    i += 1;
+  }
+
+  if(TheLastIsPoint == 1)
+  {
+    *(Num+i)   = '0';
+    *(Num+i+1) = '0';
+    *(Num+i+2) = '\0';
+  }
+    
+  i = 0;
+  while(*(Num+i) != '\0')
+  {
+    if ( *(Num+i) == '.')
+    {
+      if(*(Num+i+2) == '\0')
+      {
+        *(Num+i+2) = '0';
+      }
+      *(Num+i+3) = '\0';
+      break;
+    }
+    i += 1;
+  }
+
+  if(FixFlag == 1)
+  {
+    *(Num+3) = *(Num);
+    *(Num)   = '0';
+    *(Num+2) = '0';
+    *(Num+4) = '\0';
+  }
+  if(FixFlag == 2)
+  {
+    *(Num+4)  = *(Num+1);
+    *(Num+1)  = '0';
+    *(Num+3)  = '0';
+    *(Num+5)  = '\0';
+  }
+}
+
+void StrIDAppend(char *StringData,int NewId)
+{
+  char *New;
+  char *Ptr;
+  char i;
+
+  New = (char*) malloc(5);
+
+  Ptr = StringData;
+  while( *Ptr != '\0' )
+  {
+    Ptr += 1;
+  }
+
+  _itoa(NewId,New,10);
+
+  for(i = 0; i < 4; i++){
+    *Ptr = *(New+i);
+     Ptr += 1;
+  }
+    *Ptr = '\0';
+  printf("+STRING = %s\n",StringData);  
+}
+
+
 void ReadLine(FILE *fp,char *str)
 {
   fscanf(fp,"%s",str);
@@ -121,18 +267,18 @@ float Price(char *type,int day)
   float Ret;
   MoveDayAgoPtr(day)
   if(!strcmp("Open",type))
-    Ret = Sim3Curr->Start;
+    Ret = SimCurr->Start;
   else if (!strcmp("High",type))
-    Ret = Sim3Curr->High;
+    Ret = SimCurr->High;
   else if (!strcmp("Low",type))
-    Ret = Sim3Curr->Low;
+    Ret = SimCurr->Low;
   else if (!strcmp("Close",type))
-    Ret = Sim3Curr->End;
+    Ret = SimCurr->End;
   MoveDayBackPtr(day)
   return Ret;
 }
 
-float MA_(int day)
+float MA(int day)
 {
   float Ret;
   char  *str;
@@ -146,6 +292,8 @@ float MA_(int day)
 
   match   = 0;
   Counter = 0;
+  CountNum = 0;
+  Ret = 0;
 
   fp = fopen(TechDataName,"r");
 
@@ -160,7 +308,7 @@ float MA_(int day)
 
     if(match == 1)
     {
-      length = (int)_atoi(str);
+      length = (int)atoi(str);
       match = 2;
     }
     if(!strcmp("MA",str))
@@ -176,7 +324,7 @@ float MA_(int day)
     {
       match = 4;
     }
-    if  (Counter % length == Sim3Curr->DayIndex && match == 4)
+    if  (Counter % length == SimCurr->DayIndex && match == 4)
     {
       printf("find\n");
       Ret = (float)atof(str);
@@ -190,7 +338,7 @@ float MA_(int day)
   return Ret;
 }
 
-void KD_(float *K, float *D, int day)
+void KD(float *K, float *D, int day)
 {
   char  *str,*str1;
   FILE  *fp;
@@ -225,7 +373,7 @@ void KD_(float *K, float *D, int day)
 
     if(match == 1)
     {
-      length = (int)_atoi(str);
+      length = (int)atoi(str);
       match = 2;
     }
     if(!strcmp("KD",str))
@@ -241,7 +389,7 @@ void KD_(float *K, float *D, int day)
     {
       match = 4;
     }
-    if  (Counter % length == Sim3Curr->DayIndex && match == 4)
+    if  (Counter % length == SimCurr->DayIndex && match == 4)
     {
       printf("find\n");
       // Cutting string with ','
@@ -267,7 +415,7 @@ void KD_(float *K, float *D, int day)
 
 }
 
-float RSI_(int day)
+float RSI(int day)
 {
   float Ret;
   char  *str;
@@ -289,6 +437,7 @@ float RSI_(int day)
 
   match   = 0;
   Counter = 0;
+  Ret = 0;
 
   fp = fopen(TechDataName,"r");
   while(1)
@@ -302,7 +451,7 @@ float RSI_(int day)
 
     if(match == 1)
     {
-      length = (int)_atoi(str);
+      length = (int)atoi(str);
       match = 2;
     }
     if(!strcmp("RSI",str))
@@ -318,7 +467,7 @@ float RSI_(int day)
     {
       match = 4;
     }
-    if  (Counter % length == Sim3Curr->DayIndex && match == 4)
+    if  (Counter % length == SimCurr->DayIndex && match == 4)
     {
       printf("find\n");
       Ret = (float)atof(str);
@@ -333,9 +482,10 @@ float RSI_(int day)
   return Ret;
 }
 
-float MACD_(int EMA1day, int EMA2day)
+float MACD(int EMA1day, int EMA2day)
 {
   float Ret;
+  Ret = 0;
   return Ret;
 }
 
@@ -351,32 +501,31 @@ void Sell(char *Type, int Shares)
 
 void BuyOrSell(char Options, char *Type, int Shares)
 {
-  TRADE_RECORD2  *Record;
-  float Price;
+  TRADE_RECORD  *Record;
+  float PRICE;
   int   DayIndex;
   DATE  Dates;
 
   if(!strcmp("Now",Type))
   {
-    Price    = PRICE();
-    printf("price = %f\n",Price);
-    DayIndex = Sim3Curr->DayIndex;
-    Dates    = Sim3Curr->Dates;    
+    PRICE    = Price ("Close",0);
+    printf("price = %f\n",PRICE);
+    DayIndex = SimCurr->DayIndex;
+    Dates    = SimCurr->Dates;    
   }
   if(!strcmp("BuyNext",Type))
   {
-    Price    = (Sim3Curr+1)->Start;
-    DayIndex = (Sim3Curr+1)->DayIndex;
-    Dates    = (Sim3Curr+1)->Dates;       
+    PRICE    = (SimCurr+1)->Start;
+    DayIndex = (SimCurr+1)->DayIndex;
+    Dates    = (SimCurr+1)->Dates;       
   }
 
-
-  if (Record2Head == NULL)
+  if (RecordHead == NULL)
   {
     if(Options) //Block sell with no shares remain
     {
-      Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
-      Record->Price    = Price;
+      Record = (TRADE_RECORD *) malloc(sizeof(TRADE_RECORD));
+      Record->Price    = PRICE;
       Record->DayIndex = DayIndex;
       Record->Dates     = Dates; 
 
@@ -384,31 +533,31 @@ void BuyOrSell(char Options, char *Type, int Shares)
       Record->ShareTrades = Shares;  
       Record->SharesRemaining = Shares;
       Record->Next     = NULL;
-      Record2Head    = Record;
-      Record2Current = Record;      
+      RecordHead    = Record;
+      RecordCurrent = Record;      
     }
     return;
   }
 
   if(!Options) //Block sell with no shares remain
   {
-    if(Record2Current->SharesRemaining < Shares)
+    if(RecordCurrent->SharesRemaining < Shares)
     {
       // Shares remain not enough
       return;
     }
   } else  //Block buy with shares remain
   {
-    if(Record2Current->SharesRemaining != 0)
+    if(RecordCurrent->SharesRemaining != 0)
     {
       // Shares remains
       return;
     }
   }
 
-  Record = (TRADE_RECORD2 *) malloc(sizeof(TRADE_RECORD2));
+  Record = (TRADE_RECORD *) malloc(sizeof(TRADE_RECORD));
 
-  Record->Price    = Price;
+  Record->Price    = PRICE;
   Record->DayIndex = DayIndex;
   Record->Dates    = Dates; 
 
@@ -416,17 +565,16 @@ void BuyOrSell(char Options, char *Type, int Shares)
   Record->ShareTrades = Shares;
   Record->Next     = NULL;
 
-
   if(Options)
   {
-  Record->SharesRemaining = Record2Current->SharesRemaining + Shares;
+  Record->SharesRemaining = RecordCurrent->SharesRemaining + Shares;
   } else
   {
-  Record->SharesRemaining = Record2Current->SharesRemaining - Shares;
+  Record->SharesRemaining = RecordCurrent->SharesRemaining - Shares;
   }
 
-  Record2Current->Next = Record;
-  Record2Current = Record;
+  RecordCurrent->Next = Record;
+  RecordCurrent = Record;
 }
 
 float HandleFunctionItem(int *Rule)
@@ -529,7 +677,7 @@ float GetVaule(int *Rule)
     Ret = RSI(op_value);    
   } else if (op == KD_K_Op || op == KD_D_Op)
   {
-    KD_(&K,&D,op_value);    
+    KD(&K,&D,op_value);    
     Ret = (op == KD_K_Op) ? K:D;
   }  else if (op == MACD_Op)
   {
@@ -733,7 +881,7 @@ void PrintRule(int *Rule)
   printf("-- \n");
 }
 
-void MainProcess2() 
+void MainProcess()
 {
   int *RuleBuyPtr;
   int *RuleSellPtr;
@@ -1601,7 +1749,7 @@ void AndOrParsing(int *Rule, int **SplitRet, int **AndOrRet, int len)
 }
 */
 
-void TradeRule2()
+void TradeRule()
 {
   int i;
   int shares;
@@ -1637,7 +1785,119 @@ void TradeRule2()
   }
 }
 
-void StockSimulator3(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **ReturnRecords2Head)
+void AnalysisProfit (TRADE_RECORD *TradeRecords)
+{
+  float  MoneyIn, MoneyOut;
+  int    BuyCount, SellCount, Counter;
+  int    Shares,SharesRemaining;
+  float  TotalIn,TotalOut,LastDayPrice,Price;
+  int    SharesInTotal,SharesOutTotal;
+  float  TotalRemainValues;
+  float  AvgBuyPrice, AvgSellPrice;
+  FILE   *fp;
+  char   *str;
+
+  str = (char*) malloc(50);
+  TotalIn   = 0;
+  TotalOut  = 0;
+  Counter   = 0;
+  BuyCount  = 0;
+  SellCount = 0;
+  SharesOutTotal = 0;
+  SharesInTotal  = 0;
+  AvgBuyPrice    = 0;
+  AvgSellPrice   = 0;
+  
+  str = "Result";
+  printf(",,,\n",str);
+
+  StrIDAppend(str,StockId);
+
+  fp = fopen(str,"w");
+
+  fputs("Start\n",fp);
+  WriteNum(StockId,str,fp)
+
+  do{
+    MoneyIn  = 0;
+    MoneyOut = 0;
+    Shares   = 0;
+    
+    Price    = TradeRecords->Price;
+    Shares   = TradeRecords->ShareTrades;
+    if(TradeRecords->BuyOrSell) // buy
+    {
+      MoneyIn        +=  Price * Shares;
+      SharesInTotal  += Shares;
+      AvgBuyPrice    += Price;
+      BuyCount  += 1;
+      TotalIn  += MoneyIn;        
+    } else //sell
+    {
+      MoneyOut       += Price * Shares;
+      SharesOutTotal += Shares;
+      AvgSellPrice   += Price;
+      SellCount  += 1;
+      TotalOut += MoneyOut;        
+    }
+
+    //fwrite(&(TradeRecords2->Dates.Years), sizeof(int), 1, fp);
+    //fwrite(&(TradeRecords2->Dates.Months), sizeof(int), 1, fp);
+    //fwrite(&(TradeRecords2->Dates.Days), sizeof(int), 1, fp);
+    WriteDates(TradeRecords->Dates.Years,TradeRecords->Dates.Months,TradeRecords->Dates.Days,str,fp)
+
+    printf("TradeRecords(%d)--%d/%d/%d--\n",Counter+1,TradeRecords->Dates.Years,TradeRecords->Dates.Months,TradeRecords->Dates.Days);
+    printf("Action: ");
+ 
+    if(TradeRecords->BuyOrSell){
+      printf("In ,");
+      fputs("In\n",fp);
+    } else{
+      printf("Out ,");
+      fputs("Out\n",fp);
+    }
+
+    printf("Shares = %d, Price = %.1f, Total Price = %.1f, Shares Remaining = %d \n",Shares,Price,Shares*Price,TradeRecords->SharesRemaining);
+    printf("===============================================\n");
+
+    WriteNum(Shares,str,fp)
+    WriteFloatNum(Price,str,fp)
+    WriteNum(TradeRecords->SharesRemaining,str,fp)
+
+    Counter += 1;
+    if(TradeRecords->Next == NULL)
+    {
+      SharesRemaining = TradeRecords->SharesRemaining;
+      LastDayPrice    = SimCurr->End;
+    }
+    TradeRecords = TradeRecords->Next;
+
+  } while(TradeRecords != NULL);
+
+  AvgBuyPrice  = AvgBuyPrice / (float)BuyCount;   
+  AvgSellPrice = AvgSellPrice / (float)SellCount;
+  TotalRemainValues = (TotalOut - TotalIn) + (LastDayPrice*SharesRemaining);
+
+  fputs("total\n",fp);
+  WriteFloatNum(LastDayPrice,str,fp)
+  WriteNum(SharesRemaining,str,fp)
+  WriteFloatNum(TotalIn,str,fp)
+  WriteFloatNum(TotalOut,str,fp)
+  WriteNum(BuyCount,str,fp)
+  WriteNum(SellCount,str,fp)
+  WriteFloatNum(((float)TotalRemainValues / (float) TotalIn )*100,str,fp)
+  fputs("end\n",fp);
+
+  printf("Last Day Price = %.1f, Shares Remaining = %d, Remaining Shares Values = %.1f\n",LastDayPrice, SharesRemaining, LastDayPrice*SharesRemaining);
+  printf("Input Money= %.1f, Output Money = %.1f, Buy/Sell/Total Count = %d/%d/%d, Average Buy/Sell Price(per shares treade) = %1.f, %1.f\n", TotalIn, TotalOut ,BuyCount,SellCount,Counter,AvgBuyPrice,AvgSellPrice);
+  printf("Total Remain (Out - In)+Remaining Shares Values = %.1f\n", TotalRemainValues );
+  printf("Returns(Total Remain)/Input = %.1f%%\n", ((float)TotalRemainValues / (float) TotalIn )*100 );
+
+  free(str);
+  fclose(fp);
+}
+
+void StockSimulator(int StartDayIndex, int EndDayIndex, TRADE_RECORD  **ReturnRecordsHead)
 {
   int         Current;
 
@@ -1645,11 +1905,11 @@ void StockSimulator3(int StartDayIndex, int EndDayIndex, TRADE_RECORD2  **Return
 
   for(Current = StartDayIndex; Current <= EndDayIndex; Current++)
   {
-    Sim3Curr = InfoBuffer + Current -1; /* Move day pointer to next day */
-    printf("Day(%d) %d/%d/%d  \n",Sim3Curr->DayIndex,Sim3Curr->Dates.Years,Sim3Curr->Dates.Months,Sim3Curr->Dates.Days);
+    SimCurr = InfoBuffer + Current -1; /* Move day pointer to next day */
+    printf("Day(%d) %d/%d/%d  \n",SimCurr->DayIndex,SimCurr->Dates.Years,SimCurr->Dates.Months,SimCurr->Dates.Days);
     TradeRule();
     printf("End of Day\n");
   }
 
-  *ReturnRecords2Head = Record2Head;
+  *ReturnRecordsHead = RecordHead;
 }
