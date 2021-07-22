@@ -218,7 +218,7 @@ def GetDataByID(stock_id,InputStart,InputEnd):
     elif YearDiff > 0:
         MonthDiff = ((12 - MonthStart) + MonthEnd) + (YearDiff-1)*12
     else:
-        BaseException: Error
+        return #BaseException: Error
 
     IsTWSE = Is_TWSE_Listed(stock_id)
 
@@ -245,7 +245,7 @@ def GetDataByID(stock_id,InputStart,InputEnd):
             time.sleep(6)
             Get_Data(f,stock_id, YearData, MonthData, IsTWSE)
     else:
-        BaseException: Error
+        return #BaseException: Error
 
     f.write("end\n")
     f.close()

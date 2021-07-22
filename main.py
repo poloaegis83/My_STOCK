@@ -1,7 +1,7 @@
 import os
 from matplotlib import pyplot as plt
 import copy
-from FetchData import FetchHistoryData
+import subprocess
 
 PlotDataX = []
 PlotDataYH = []
@@ -17,7 +17,18 @@ Result_Remain = []
 
 TotalDay = 0
 
-def GetData(stock_id,InputStart,InputEnd):
+def GetData(Filename,InputStart,InputEnd):
+
+    global PlotDataX
+    global PlotDataYO
+    global PlotDataYC
+    global PlotDataYH
+    global PlotDataYL
+
+    print("Gen data file name:",Filename)
+
+    #InputStart = Filename[12:18]
+    #InputEnd   = Filename[19:25]
 
     YearStart  = int(InputStart[0:4])
     MonthStart = int(InputStart[4:6])
@@ -25,12 +36,16 @@ def GetData(stock_id,InputStart,InputEnd):
     YearEnd    = int(InputEnd[0:4])
     MonthEnd   = int(InputEnd[4:6])
 
-    f = open("HistoryData/History"+stock_id+"_", mode='r')    
+    print("Start:End",InputStart,InputEnd)
+
+    f = open("HistoryData/"+Filename, mode='r')    
 
     i = 0
     count = 0
 
-    for Da in f.readline():
+    for Dat in f.readlines():
+        Da = Dat.replace("\n","")
+        #print("i =",i, "Da =",Da)
         if Da == "end":
             print("end")
             continue
@@ -41,19 +56,20 @@ def GetData(stock_id,InputStart,InputEnd):
         if i % 11 == 2:
             D = Da
             if ( YearStart < int(Y) and YearEnd > int(Y) ) or ( YearStart == int(Y) and MonthStart <= int(M) ) or ( YearEnd == int(Y) and MonthEnd >= int(M) ) :
+                print(Y+"/"+M+"/"+D)
                 PlotDataX.append(Y+"/"+M+"/"+D)
                 InRange = 1
                 count += 1
             else:
                 InRange = 0
         if i % 11 == 3 and InRange == 1:
-            PlotDataYO.append(Da)
+            PlotDataYO.append(int(Da)/100)
         if i % 11 == 4 and InRange == 1:
-            PlotDataYC.append(Da)
+            PlotDataYC.append(int(Da)/100)
         if i % 11 == 5 and InRange == 1:
-            PlotDataYH.append(Da)
+            PlotDataYH.append(int(Da)/100)
         if i % 11 == 6 and InRange == 1:
-            PlotDataYL.append(Da)
+            PlotDataYL.append(int(Da)/100)
         i += 1
 
     TotalDay = count
@@ -106,6 +122,8 @@ def SplitYearResult():
     ResultInYear.append(copy.deepcopy(R_A))
     ResultInYear.append(copy.deepcopy(R_S))
     ResultInYear.append(copy.deepcopy(R_R))
+    
+    #print("ResultInYear",ResultInYear)
 
     return ResultInYear
 
@@ -129,12 +147,12 @@ def SplitYearData():
 
     for spli1,spli2,spli3,spli4,spli5 in zip(PlotDataX,PlotDataYO,PlotDataYC,PlotDataYH,PlotDataYL):
         spli_year = spli1.split("/")
-        #print("SY=",spli_year)
+        print("SY=",spli_year)
         if firstdata == 1:
             YearNow = spli_year[0]
             firstdata = 0
         if YearNow != spli_year[0]:
-            #print("year changed")
+            print("year changed")
             DataInYear.append(copy.deepcopy(PD_X))
             DataInYear.append(copy.deepcopy(PD_O))
             DataInYear.append(copy.deepcopy(PD_C))
@@ -183,9 +201,11 @@ def ReadResult(ID):
     for result in f.readlines():
         SResult.append( result.replace("\n","") )
 
+    print(SResult)
+
     Check_Sim_exist = 0
     Counter = 0
-    #print("======================")
+    print("======================")
     for ana in SResult:
         #print("ana = ",ana,"c = ",Counter)
         if ana == "Start":
@@ -210,6 +230,11 @@ def ReadResult(ID):
 
 
 def GenResult(PlotByYear,ID):
+    global PlotDataX
+    global PlotDataYO
+    global PlotDataYC
+    global PlotDataYH
+    global PlotDataYL
 
     ReadResult(ID)
     ResultInYear = SplitYearResult()
@@ -233,9 +258,11 @@ def GenResult(PlotByYear,ID):
     ind  = 0
     ind2 = 0
 
+    #print(PlotByYear)
+
     for YD in PlotByYear:
         if ind % 5 == 0:
-            PlotDataX = copy.deepcopy(YD)
+            PlotDataX  = copy.deepcopy(YD)
         if ind % 5 == 1:
             PlotDataYC = copy.deepcopy(YD)
         if ind % 5 == 2:
@@ -249,7 +276,7 @@ def GenResult(PlotByYear,ID):
             ind += 1
             continue
         ind += 1
-
+        print("PlotDataX[0] = ",PlotDataX[0])
         Years = PlotDataX[0].split("/")
 
         #Get result in years
@@ -276,11 +303,11 @@ def GenResult(PlotByYear,ID):
                 #print("year match")
                 break
             ind2 += 1
-            Result_X.clear()
-            Result_Y.clear()
-            Result_Action.clear()
-            Result_Share.clear()
-            Result_Remain.clear()  
+            #Result_X.clear()
+            #Result_Y.clear()
+            #Result_Action.clear()
+            #Result_Share.clear()
+            #Result_Remain.clear()  
 
         #print("gen")
 
@@ -350,7 +377,9 @@ def GenResult(PlotByYear,ID):
     
         fig.set_figheight(20)
         fig.set_figwidth(96)
+        print("Years[0] = = ",Years[0])
         PIC_NAME = "K_Bar"+ID+"_"+Years[0]+".png"
+        print(PIC_NAME)
         fig.savefig(PIC_NAME)
         os.system("move "+PIC_NAME+" Result/"+ID+"/")
         #os.system("mkdir Result"+ID)
@@ -373,15 +402,15 @@ def GenResult(PlotByYear,ID):
         colors.clear()
 
 
-def StartSimulation(Cmd,StockID):
-    
+def StartSimulation(ArgList,MatchFile,InuptStart,InputEnd):
+
     IDList = []
     os.system("rmdir Result /s /q")
     os.system("mkdir Result")
 
     f = open("IDList.txt", mode='r')
 
-    Filename = "History"+StockID+"_201301_202012"
+    #Filename = HistoryDataFileName
 
     while 1:
         ID = f.read(4)
@@ -392,18 +421,40 @@ def StartSimulation(Cmd,StockID):
 
     f.close()
 
+    CMDList = []
+
     for ID_LIST in IDList:
         print("ID:",ID_LIST)
         os.system("del Result"+ID_LIST)
 
-    for ID_LIST in IDList:
-        SimStr = "CalculateData.exe "+Filename+" "+ID_LIST+Cmd
-        os.system(SimStr)
+    for ID_LIST,Filename in zip(IDList,MatchFile):
+        #subprocess.Popen(["StockEmulator.exe","abc.txt"])
+        #imStr = "StockEmulator.exe "+Filename+" "+ID_LIST+Cmd
+        #print(SimStr)
+
+        CMDList.append("StockEmulator.exe")
+        CMDList.append(Filename)
+        CMDList.append(ID_LIST)
+
+        CMDList = CMDList+ArgList
+
+        print(CMDList)
+        p = subprocess.Popen(CMDList)
+        p.wait()
+        GetData(Filename,InuptStart,InputEnd)
+
+        # delete history data when all done
+        #os.system(SimStr)
 
         PlotByYear = SplitYearData()
+        
+        #print("PLOT+++",PlotByYear)
+
         GenResult(PlotByYear,ID_LIST)
         PlotDataX.clear()
         PlotDataYO.clear()
         PlotDataYC.clear()
         PlotDataYH.clear()
         PlotDataYL.clear()
+        
+        CMDList.clear()

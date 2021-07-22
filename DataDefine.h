@@ -104,7 +104,7 @@ extern DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 extern TRADE_RECORD  *RecordHead;
 extern TRADE_RECORD  *RecordCurrent;
 
-void StockSimulator(int StartDayIndex, int EndDayIndex, TRADE_RECORD  **ReturnRecordsHead);
+void StockSimulator(int len, TRADE_RECORD  **ReturnRecordsHead);
 void AnalysisProfit (TRADE_RECORD  *TradeRecords2);
 void  ReadLine(FILE *fp,char *str);
 //int   FindTotalLen(FILE *fp);
@@ -124,5 +124,5 @@ extern int         MACD_count;
 extern int         *RSI_value;
 extern int         RSI_count;
 extern int         StockId;
-
+extern int         StartDayIndex;
 #endif /*_STOCK_DATA_*/

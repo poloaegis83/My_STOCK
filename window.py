@@ -5,6 +5,7 @@ from tkinter import filedialog
 from FetchData import FetchHistoryData
 import os
 from main import StartSimulation
+import subprocess
 
 ConditionListAll = []
 ConditionList = []
@@ -682,6 +683,78 @@ def Entry7callback():
         var7.set(Stri[0:-1])
         return
 
+def Entry8callback():
+    global var8
+
+    Stri = var8.get()
+
+    if str.isdigit(Stri) != 1:
+        var8.set(Stri[0:-1])
+        return
+
+    if len(Stri) == 1:
+        if Stri[-1] != '2':
+            var8.set(Stri[0:-1])
+            return
+
+    if len(Stri) == 2:
+        if Stri[-1] != '0':
+            var8.set(Stri[0:-1])
+            return
+
+    if len(Stri) == 5:
+        if Stri[-1] != '0' and Stri[-1] != '1':
+            var8.set(Stri[0:-1])
+            return
+
+    if len(Stri) == 6:
+        if Stri[-2] == '1' and Stri[-1] > '2':
+            var8.set(Stri[0:-1])
+            return
+        if Stri[-2] == '0' and Stri[-1] == '0':
+            var8.set(Stri[0:-1])
+            return
+
+    if len(Stri) > 6:
+        var8.set(Stri[0:-1])
+        return
+
+def Entry9callback():
+    global var9
+
+    Stri = var9.get()
+
+    if str.isdigit(Stri) != 1:
+        var9.set(Stri[0:-1])
+        return
+
+    if len(Stri) == 1:
+        if Stri[-1] != '2':
+            var9.set(Stri[0:-1])
+            return
+
+    if len(Stri) == 2:
+        if Stri[-1] != '0':
+            var9.set(Stri[0:-1])
+            return
+
+    if len(Stri) == 5:
+        if Stri[-1] != '0' and Stri[-1] != '1':
+            var9.set(Stri[0:-1])
+            return
+
+    if len(Stri) == 6:
+        if Stri[-2] == '1' and Stri[-1] > '2':
+            var9.set(Stri[0:-1])
+            return
+        if Stri[-2] == '0' and Stri[-1] == '0':
+            var9.set(Stri[0:-1])
+            return
+
+    if len(Stri) > 6:
+        var9.set(Stri[0:-1])
+        return
+
 def LoadConditionFromFile():
     file_path = filedialog.askopenfilename(filetypes =[("stock files", "*.stock")])
     print(file_path)
@@ -721,16 +794,77 @@ except:
 
 def Run():     # check rule, and prepare which item needed
 
-
-    YearStart = var1.get()
-    YearEnd   = var2.get()
+    YearStart = var8.get()
+    YearEnd   = var9.get()
 
     if YearStart == "" or YearEnd == "":
         print("please input time")
         return
 
+
     # check time in range
-    # TBD ...
+    DirPath  =  os.getcwd()
+    path1 = DirPath+"\\HistoryData"
+    HistoryList = os.listdir(path1)
+
+    #MatchFileId   = []
+    MatchFile     = []
+
+    for ID in IDList:
+        match = 0
+        for HT in HistoryList:
+            find  = 1
+            HisID = HT[7:11]
+            print("ID = ",HisID,"-",HT)
+            if HisID != ID:
+                continue
+            # same id check time
+            print("HT = ",HT)
+            HisStart = HT[12:18]
+            HisEnd   = HT[19:25]
+
+            print("HisStart,HisEnd",HisStart,HisEnd)
+            # check in the range
+            #str = YearStart[0:4]
+            InputSY = int(YearStart[0:4])  # start year input
+            InuptSM = int(YearStart[4:6])  # start month
+
+            InputEY = int(YearEnd[0:4])    # end year
+            InputEM = int(YearEnd[4:6])    # end month
+
+            HisSY = int(HisStart[0:4])     # start year history file
+            HisSM = int(HisStart[4:6])     # start month history file
+
+            HisEY = int(YearEnd[0:4])      # end year history file  
+            HisEM = int(YearEnd[4:6])      # end month history file  
+            
+            # case of time not match
+            if InputSY <= HisSY :
+                print("don't pass check input year should not <=")
+                find = 0
+            if InputSY >= HisSY+1:     # input year should over history start 1 year
+                if InputSY == HisSY+1: # if year equals +1, check start month
+                    if InuptSM < HisSM:
+                        print("don't pass check input start month should not <")
+                        find = 0
+                # check end
+                if InputEY == HisEY and InputEM > HisEM:
+                    print("don't pass check month should not over history data")
+                    find = 0
+                if InputEY > HisEY:
+                    print("don't pass check year should not over history data")
+                    find = 0
+
+            if find == 1 and match == 0: # find first match file only
+                #MatchFileId.append(ID)
+                MatchFile.append(HT) # If all pass record it to list
+                match = 1
+        
+        if match == 0:
+            print("not find history file for this id or input data not in history data")
+            return
+    
+    print(MatchFile)
 
     # check history data already download
     '''
@@ -751,7 +885,8 @@ def Run():     # check rule, and prepare which item needed
     Item  = []
     Value = []
 
-    CalItemList = ""   # String of item
+    #CalItemList = ""   # String of item
+    ArgList = []
 
     f = open("ConditionList.stock", mode='r')
 
@@ -772,11 +907,11 @@ def Run():     # check rule, and prepare which item needed
                 StartOfRule += 1
             continue
         if i % 2 == 0:             # Read Op
-            print("op = ",Lis)
+            #print("op = ",Lis)
             for a,b in ItemList:
-                print("a,b ",a,b)
+                #print("a,b ",a,b)
                 if Data == str(b):
-                    print("match")
+                    #print("match")
                     DataCatch   = 1
                     Item.append(a)
 
@@ -796,7 +931,7 @@ def Run():     # check rule, and prepare which item needed
         if match == 1:
             OneList.append(a)
 
-    print("OneList",OneList)
+    #print("OneList",OneList)
 
     ValueListInOne = []
 
@@ -816,30 +951,49 @@ def Run():     # check rule, and prepare which item needed
                     if match == 0:  # if not in list, add it
                         ValueListInOne.append(b)
                         MatchCounter += 1
-
-        CalItemList += " -"+c+" "+str(MatchCounter) # -KD
+        ArgList.append("-"+c)
+        ArgList.append(str(MatchCounter))
+        #CalItemList += " -"+c+" "+str(MatchCounter) # -KD
         for e in ValueListInOne:
-            CalItemList += " "+e   # -KD 20 30 40
+            #CalItemList += " "+e   # -KD 20 30 40
+            ArgList.append(e)
         ValueListInOne.clear()
 
     f.close()
 
-    SimStr     = CalItemList+" -Range "+YearStart+" "+YearEnd 
+    #ArgList = []
+    ArgList.append("-Range")
+    ArgList.append(YearStart)
+    ArgList.append(YearEnd)
+    #SimStr     = CalItemList+" -Range "+YearStart+" "+YearEnd 
 
-    for StockID in IDList:
-        # Check calculate data filename
-        Filename = "History"+StockID+"_201301_202012"
-        
-        # prepare data
-        CalDataStr = "CalculateData.exe "+Filename+" "+StockID+CalItemList+" -Range "+YearStart+" "+YearEnd
+    CMDList = []
 
-        print(CalDataStr)
-        print(SimStr)
+    for StockID,FileN in zip(IDList,MatchFile):
+        # Hisroty data filename
+        Filename = FileN
+        # Prepare data
+        #CalDataStr = "CalculateData.exe "+Filename+" "+StockID+CalItemList+" -Range "+YearStart+" "+YearEnd
+        CMDList.append("CalculateData.exe")
+        CMDList.append(Filename)
+        CMDList.append(StockID)
+
+        CMDList = CMDList+ArgList
+
+        print(CMDList)
+        p = subprocess.Popen(CMDList)
+        p.wait()
+        CMDList.clear()
+        #print(CalDataStr)
+        #print(SimStr)
+        print(DirPath+"\\HistoryData\\"+FileN)
+        print(DirPath+"\\")
+        shutil.copy(DirPath+"\\HistoryData\\"+FileN,DirPath)
         # Call format: CalculateData.exe [filename] [Stock Id] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] -[MA|KD|RSI|MACD] [Number of data set] [Parameter ...] ...
         #os.system(CalDataStr)  #call CalculateData to preare data
     
     # After parepare data, then call simulator through main.py
-    #StartSimulation(SimStr,StockID)
+    StartSimulation(ArgList,MatchFile,YearStart,YearEnd)
 
 f = open("IDList.txt", mode='r')
 IDList = []
@@ -881,6 +1035,9 @@ var4     = tk.StringVar()
 var5     = tk.StringVar()
 var6     = tk.StringVar()
 var7     = tk.StringVar()
+var8     = tk.StringVar()
+var9     = tk.StringVar()
+
 R1var    = tk.IntVar() # TechType,OperationType
 R2var    = tk.IntVar() # FindInRange
 R3var    = tk.IntVar() # Trade
@@ -892,6 +1049,8 @@ var4.trace("w", lambda name, index,mode, var=var4: Entry4callback())
 var5.trace("w", lambda name, index,mode, var=var5: Entry5callback())
 var6.trace("w", lambda name, index,mode, var=var5: Entry6callback())
 var7.trace("w", lambda name, index,mode, var=var5: Entry7callback())
+var8.trace("w", lambda name, index,mode, var=var5: Entry8callback())
+var9.trace("w", lambda name, index,mode, var=var5: Entry9callback())
 
 # lebal
 l1 = tk.Label(window,textvariable= IDvar, bg='yellow') 
@@ -914,6 +1073,7 @@ l17 = tk.Label(window,text="Trade Type:", font=('Corbel' ) )
 l18 = tk.Label(window,text="Shares:", font=('Corbel' ) )
 l19 = tk.Label(window,text="Rules:", font=('Comic Sans MS', 20) )
 l20 = tk.Label(window,text="No:", font=('Corbel' ) )
+l21 = tk.Label(window,text="   Iuput Start - End period", font=('Corbel' ) )
 
 ll0 = tk.Label(window,text="         ", font=('Arial' ) , bg='green')
 ll1 = tk.Label(window,text="         ", font=('Arial' ) , bg='red')
@@ -944,6 +1104,8 @@ e4 = tk.Entry(window,textvariable=var4,width = 4, show=None)  #, width=9, font=(
 e5 = tk.Entry(window,textvariable=var5,width = 4, show=None)  #, width=9, font=('Arial', 14))  # range
 e6 = tk.Entry(window,textvariable=var6,width = 6, show=None)  #, width=9, font=('Arial', 14))  # shares
 e7 = tk.Entry(window,textvariable=var7,width = 4, show=None)  #, width=9, font=('Arial', 14))  # remove number
+e8 = tk.Entry(window,textvariable=var8,width = 8, show=None)  #, width=9, font=('Arial', 14))  # Run Start
+e9 = tk.Entry(window,textvariable=var9,width = 8, show=None)  #, width=9, font=('Arial', 14))  # Run end
 
 # button
 b1 = tk.Button(window, text='Get data', font=('Constantia', 9), width=8, height=1, command=get)
@@ -955,7 +1117,7 @@ b6 = tk.Button(window, text='Create a Rule', font=('Constantia', 12 , "bold" ), 
 b7 = tk.Button(window, text='Remove rule by number', font=('Constantia', 9), command=RemoveCurrentConditionList)
 b8 = tk.Button(window, text='Save Rule', font=('Constantia', 9), command=SaveConditionToFile)
 b9 = tk.Button(window, text='Load Rule', font=('Constantia', 9), command=LoadConditionFromFile)
-b10 = tk.Button(window, text='Run', font=('Constantia', 10), width = 7, height = 4, command=Run)
+b10 = tk.Button(window, text='Run', font=('Constantia', 10), width = 7, height = 3, command=Run)
 
 Rowr += 1
 
@@ -971,11 +1133,14 @@ e1.grid(row=Rowr, column=3,columnspan=3,sticky ="W")  # entry
 l4.grid(row=Rowr, column=5,columnspan=2,sticky ="E")  # end date
 e2.grid(row=Rowr, column=7,columnspan=3,sticky ="W")  # entry
 b1.grid(row=Rowr, column=9,columnspan=3,sticky ="W")  # get data button
+l21.grid(row=Rowr, column=13,columnspan=6,sticky ="E") # Iuput Start-End period lebal
 Rowr += 1
 
 l5.grid(row=Rowr, column=0,columnspan=20)    # Add or Remove ID lebal
 l6.grid(row=Rowr, column=5,sticky ="W")      # Add or Remove ID status lebal
-b10.grid(row=Rowr,column=14,rowspan=4,columnspan=5,sticky ="E")
+e8.grid(row=Rowr, column=14,columnspan=3,sticky ="E") # run input start
+e9.grid(row=Rowr, column=16,columnspan=3,sticky ="E") # run input end
+b10.grid(row=Rowr,column=14,rowspan=4,columnspan=5,sticky ="E")  # run button
 Rowr += 1
 
 l7.grid(row=Rowr, column=1,columnspan=2,sticky ="E")   # stock id

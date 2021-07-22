@@ -674,29 +674,33 @@ void WriteCalData()
   char   *Id;
 
   str = (char*) malloc(50);
-  Id  = (char*) malloc(10);
+  //Id  = (char*) malloc(10);
 
-  _itoa(StockId,Id,10);
+  //_itoa(StockId,Id,10);
 
   str = "TechResult";
 
   j = 0;
   while (1)
   {
-    j++;
     if (*(str+j) == '\0')
+    {
+      Id = str+j;
       break;
+    }
+    j++;
   }
-
+  _itoa(StockId,Id,10);
+/*
   for (k = 0; k < 5; k++)
   {
     *(str+j+k) = *(Id+k);
     if (k == 4)
       *(str+j+k) = '\0';
-  }
+  }*/
 
-  printf("ID str = %s\n",Id);
-  printf("ID = %d\n",StockId);
+  //printf("ID str = %s\n",Id);
+  //printf("ID = %d\n",StockId);
   printf("str = %s\n",str);
 
   fp = fopen(str,"w");

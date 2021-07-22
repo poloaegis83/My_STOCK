@@ -4,10 +4,10 @@ char DebugFlag = 0;
 
 void InitStockDailyInfoData (FILE *fp);
 
-int           StartYear;
-int           EndYear;
-int           StartMonth;
-int           EndMonth;
+int         StartYear;
+int         EndYear;
+int         StartMonth;
+int         EndMonth;
 
 int         *MA_value;
 int         MA_count = 0;
@@ -23,6 +23,7 @@ int         RSI_count = 0;
 
 int         len;
 int         StockId;
+int         StartDayIndex;
 
 DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 DAILY_INFO  *BuffInitPtr;
@@ -42,10 +43,6 @@ void PrintInfo(int days)
     printf("DayIndex(ID:%d)   %d/%d/%d            = %d\n",Daily->StockID,Daily->Dates.Years,Daily->Dates.Months,Daily->Dates.Days,Daily->DayIndex);
     printf("Start,High,Low,End                      = %.1f,%.1f,%.1f,%.1f\n",Daily->Start,Daily->High,Daily->Low,Daily->End);
     printf("Diff Leader,Foreign,Investment,Dealers  = %d,%d,%d,%d\n",Daily->LeaderDiff,Daily->ForeignInvestorsDiff,Daily->InvestmentTrustDiff,Daily->DealersDiff);
-    printf("MA5,10,20,60                            = %.f,%.1f,%.1f,%.1f\n",Daily->MA.MA5,Daily->MA.MA10,Daily->MA.MA20,Daily->MA.MA60);
-    printf("K,D,J                                   = %.1f, %.1f, %.1f\n",Daily->KDJ.K, Daily->KDJ.D, Daily->KDJ.J);
-    printf("RSI(6),RSI(12)                          = %.1f, %.1f\n",Daily->RSI.RSI_6,Daily->RSI.RSI_12);	
-    printf("DIF,EMA12,EMA26,MACD9,OSC               = %.1f, %.1f, %.1f, %.1f, %.1f\n",Daily->MACD.DIF,Daily->MACD.EMA12,Daily->MACD.EMA26,Daily->MACD.MACD9,Daily->MACD.OSC);	 
 	  Daily += 1;
   }
   printf("\n=================================================\n");
@@ -81,6 +78,7 @@ void InitStockDailyInfoData(FILE *fp)
   char *str;
 
   int i = 1;
+  int StartMark;
   int Year,Month;
   int Record = 0;
   
@@ -92,9 +90,11 @@ void InitStockDailyInfoData(FILE *fp)
 
   BuffInitPtr = InfoBuffer;
 
+  StartMark = 0;
+
   while(1)
   {
-    printf("i = %d ",i);
+    //printf("i = %d ",i);
     ReadLine(fp,str);
 
     if (!strcmp("end",str))
@@ -103,14 +103,27 @@ void InitStockDailyInfoData(FILE *fp)
 
     ReadLine(fp,str);
     Month = (int)atoi(str);
-
-    if ( (Year > StartYear  && Year  < EndYear)    ||\
-         (Year == StartYear && Month > StartMonth) ||\
-         (Year == EndYear   && Month < EndMonth)  )
+    //
+    // Record one years ago and record start index
+    //
+    if ( (Year > StartYear-1  && Year  < EndYear)    ||\
+         (Year == StartYear-1 && Month >= StartMonth) ||\
+         (Year == EndYear   && Month <= EndMonth)  )
     {
       BuffInitPtr->Dates.Years  = Year;
       BuffInitPtr->Dates.Months = Month;
+      BuffInitPtr->StockID      = StockId;
       Record = 1;
+      //printf("V");
+      if (Year == StartYear && StartMark == 0)
+      {
+        if (Month == StartMonth)
+        {
+          StartDayIndex = i;
+          StartMark = 1;
+        }
+
+      }
     }
     else
       Record = 0;
@@ -153,14 +166,17 @@ void InitStockDailyInfoData(FILE *fp)
 
     if(Record)
       BuffInitPtr->DayIndex             = i;
+    if(Record)
+    {
+      BuffInitPtr++;
+      i++;
+    }
 
-    BuffInitPtr++;
-    i++;
   }
   
-  len = i;
+  len = i-1;
 
-  PrintInfo(len);
+  //PrintInfo(len);
 
   free(str);
 }
@@ -169,14 +185,12 @@ int main(int argc, char **argv)
 {
   char          *Str;
   char          *Str2;
-  int           StartDayIndex;
-  int           EndDayIndex;
+
   TRADE_RECORD  *ReturnRecords;
-  TRADE_RECORD2 *ReturnRecords2;  
   FILE          *fp;  
   int           ArgIndex;
-  char        *str,*StartDate,*EndDate;
-  int         i;
+  char          *str,*StartDate,*EndDate;
+  int            i;
 
   // 
   // Argument format:
@@ -300,7 +314,7 @@ int main(int argc, char **argv)
   //
   // Init the stock data struct
   //
-  //InitStockDailyInfoData(fp);
+  InitStockDailyInfoData(fp);
 
   //
   // Emulator for (StartDayIndex - EndDayIndex) Days Interval
@@ -308,13 +322,14 @@ int main(int argc, char **argv)
 
   ReturnRecords = NULL;
 
+  printf("len = %d, StartIndex = %d\n",len, StartDayIndex);
 
-  //StockSimulator (StartDayIndex, EndDayIndex, &ReturnRecords);
+  StockSimulator (len, &ReturnRecords);
 
   //
   // Calculate profit base on the records
   //
-  //AnalysisProfit (ReturnRecords);
+  AnalysisProfit (ReturnRecords);
 
   //free(InfoBuffer);
   //XML_ParserFree(Parser);
