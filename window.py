@@ -1137,7 +1137,7 @@ l21.grid(row=Rowr, column=13,columnspan=6,sticky ="E") # Iuput Start-End period 
 Rowr += 1
 
 l5.grid(row=Rowr, column=0,columnspan=20)    # Add or Remove ID lebal
-l6.grid(row=Rowr, column=5,sticky ="W")      # Add or Remove ID status lebal
+l6.grid(row=Rowr, column=4,columnspan=5,sticky ="W")      # Add or Remove ID status lebal
 e8.grid(row=Rowr, column=14,columnspan=3,sticky ="E") # run input start
 e9.grid(row=Rowr, column=16,columnspan=3,sticky ="E") # run input end
 b10.grid(row=Rowr,column=14,rowspan=4,columnspan=5,sticky ="E")  # run button

@@ -1,18 +1,13 @@
 #include "DataDefine.h"
 
-#define WriteDates(x,y,z,str,fp)  PrepareDateStr( x, y, z, str);\
-                                  fputs(str,fp);
+#define WriteDates(x,y,z,fp)    PrepareDateStr( x, y, z, fp);\
 
-#define WriteNum(x,str,fp)        PrepareNumberStr(x,str);\
-                                  fputs(str,fp);
+#define WriteNum(x,fp)          PrepareNumberStr(x,fp);\
 
-#define WriteFloatNum(x,str,fp)     FixPoint2(x);\
-                                    gcvt(x,6,str);\
-                                    CheckFloatString(str);\
-                                    fputs(str,fp);\
-                                    fputs("\n",fp);
+#define WriteFloatNum(x,fp)     FixPoint2(x);\
+                                WriteFloatString(x,fp);\
 
-#define FPUT(str,fp)                FputCL(str,fp);\
+//#define FPUT(Istr,fp)              FputCL(Istr,fp);\
 
 #define MoveDayAgoPtr(x)   SimCurr -= x;\
                            ShiftDay = x;
@@ -156,10 +151,12 @@ void InsertZeroForDate(char *Dates)
   }
 }
 
-void PrepareNumberStr(int Num, char *str)
+void PrepareNumberStr(int Num, FILE *fp)
 {
-  char  *temp;
+  char  *temp, *str;
   int    i = 0;
+
+  str = (char*) malloc(50);
   temp = (char*) malloc(50);
 
   _itoa(Num,temp,10);
@@ -176,11 +173,16 @@ void PrepareNumberStr(int Num, char *str)
     i++;
   }
   *(str+i+1) = 0;
+
+  fputs(str,fp);
 }
 
-void PrepareDateStr(int y, int m, int d, char *str)
+void PrepareDateStr(int y, int m, int d, FILE *fp)
 {
   char  *temp;
+  char  *str;
+
+  str = (char*) malloc(50);
   temp = (char*) malloc(50);
 
   _itoa(y,temp,10);
@@ -207,6 +209,8 @@ void PrepareDateStr(int y, int m, int d, char *str)
   *(str+10)  = 10; // newline
   *(str+11)  = 0;  // end
 
+  fputs(str,fp);
+
   printf("========%s",str);
 
 }
@@ -228,8 +232,11 @@ void FputCL(char *str, FILE *fp)
 {
   int i = 0;
   char  *temp;
+
   temp = (char*) malloc(50);
-  printf("FPUTCL = %d,%d,%d ",*str,*(str+1),*(str+2));
+
+  printf("FPUTCL = %d,%d,%d,%d ",*str,*(str+1),*(str+2),*(str+3));
+
   while(1)
   {
     *(temp+i) = *(str+i);
@@ -241,21 +248,27 @@ void FputCL(char *str, FILE *fp)
     i++;
   }
   *(temp+i+1) = 0;
+  printf("temp = %s ",temp);
   fputs(temp,fp);
 }
 /***
  To prevet float number string like "200."
  should be "200.0"
 ***/
-void CheckFloatString(char *Num)
+void WriteFloatString(float x, FILE *fp)
 {
-  int i;
+  int  i;
   char TheLastIsPoint = 0;
   char IsPoint = 0;
+  char *Num;
+
+  Num = (char*) malloc(50);
+
+  gcvt(x,6,Num);
 
   i = 0;
 
-  while(*(Num+i) != '\0')
+  while(*(Num+i) != '\0')  // case of 85. => fill it to 85.00
   {
     TheLastIsPoint = 0;
     if ( *(Num+i) == '.')
@@ -269,11 +282,11 @@ void CheckFloatString(char *Num)
   {
     *(Num+i)   = '0';
     *(Num+i+1) = '0';
-    *(Num+i+2) = '\0';
+    *(Num+i+2) =  0;
   }
     
   i = 0;
-  while(*(Num+i) != '\0')
+  while(*(Num+i) != '\0')  // case of 85.1 => fill it to 85.10
   {
     if ( *(Num+i) == '.')
     {
@@ -281,26 +294,43 @@ void CheckFloatString(char *Num)
       {
         *(Num+i+2) = '0';
       }
-      *(Num+i+3) = '\0';
+      *(Num+i+3) =  10;//change line
+      *(Num+i+4) =  0;
+      break;
+    }
+    i += 1;
+  }
+  
+  i = 0;
+  while(*(Num+i) != '\0')  //  make sure XX.XX 
+  {
+    if ( *(Num+i) == '.')
+    {
+      *(Num+i+3) = 10; //change line
+      *(Num+i+4) = 0;
       break;
     }
     i += 1;
   }
 
-  if(FixFlag == 1)
+  if(FixFlag == 1)  // case of  0 < value < 0.1
   {
     *(Num+3) = *(Num);
     *(Num)   = '0';
     *(Num+2) = '0';
-    *(Num+4) = '\0';
+    *(Num+4) =  10; //change line
+    *(Num+5) =  0;
   }
-  if(FixFlag == 2)
+  if(FixFlag == 2) // case of  0 > value > -0.1
   {
     *(Num+4)  = *(Num+1);
     *(Num+1)  = '0';
     *(Num+3)  = '0';
-    *(Num+5)  = '\0';
+    *(Num+5)  =  10;  //change line
+    *(Num+6)  =   0;
   }
+  printf("float = %s  ",Num);
+  fputs(Num,fp);
 }
 
 void StrIDAppend(char *StringData,int NewId)
@@ -579,7 +609,6 @@ float RSI(int day)
     {
       Counter++;
     }
-
 
   }
 
@@ -1060,6 +1089,7 @@ void MainProcess()
     }
     RootBuy->Levels = CheckRuleLevel(RuleBuyPtr);
     RootBuy->Rule   = RuleBuyPtr;
+    RootBuy->ChildCount = 0;
     printf("root level = %d  ",RootBuy->Levels );
  
     BuildTree(RootBuy);
@@ -1081,7 +1111,6 @@ void MainProcess()
     printf("\n\n\n ");
   //}  
   //TraceNode(*RootBuyAll);
-
 
   
   j = 0;
@@ -1105,7 +1134,7 @@ void MainProcess()
 
     RootSell->Levels = CheckRuleLevel(RuleSellPtr);
     RootSell->Rule   = RuleSellPtr;
-
+    RootSell->ChildCount = 0;
     //PrintRule(RuleSellPtr);
     BuildTree(RootSell);
 
@@ -1147,7 +1176,7 @@ void MainProcess()
     }
     RootBuyNext->Levels = CheckRuleLevel(RuleBuyNextPtr);
     RootBuyNext->Rule   = RuleBuyNextPtr;
-
+    RootBuyNext->ChildCount = 0;
     PrintRule(RuleBuyNextPtr);
     BuildTree(RootBuyNext);
 
@@ -1407,18 +1436,19 @@ void BuildTree(RuleNodes *Root)
   AddTree(Root);
 
   ChildC = Root->ChildCount;
-
+  printf("child Num of this root = %d\n",ChildC);
   // scan all the child
   for(i = 0; i < ChildC; i++)
   {
     printf("\nbuild child(%d) of root = %x\n",i,*(Root->Child + i));
     ChildN = *(Root->Child + i);
-    printf("Child?\n");
+    //printf("Child?\n");
     BuildTree(ChildN);
     printf("build child(%d) done\n\n",i);
   }
-
-  printf("build child done alll\n");
+  printf("build child all done for :");
+  PrintRule(Root->Rule);
+  printf("======================\n");
 }
 
 int CheckRuleLevel(int *Rule)
@@ -1541,6 +1571,7 @@ void AddTree(RuleNodes *Root)
       NewNode->Rule   = SplitPtr;
       NewNode->Child  = NULL;
       NewNode->Levels = CheckRuleLevel(NewNode->Rule);
+      NewNode->ChildCount = 0;
 
       *(Root->Child+i) = NewNode;
       Root->ChildCount += 1;
@@ -1756,13 +1787,13 @@ void TradeRule()
       Buy("Now",shares);
     }
   }
-/*
+
   for (i = 0; i < RuleSellCount; i++)
   {
     if (CalRule(*(RootSellAll+i)))
     {
       //Sell
-      shares = (*(RootBuyAll+i))->shares;
+      shares = (*(RootSellAll+i))->shares;
       Sell("Now",shares);
     }
   }
@@ -1772,10 +1803,10 @@ void TradeRule()
     if (CalRule(*(RootBuyNextAll+i)))
     {
       //BuyNext
-      shares = (*(RootBuyAll+i))->shares;
+      shares = (*(RootBuyNextAll+i))->shares;
       Buy("BuyNext",shares);
     }
-  }*/
+  }
 }
 
 void AnalysisProfit (TRADE_RECORD *TradeRecords)
@@ -1788,9 +1819,9 @@ void AnalysisProfit (TRADE_RECORD *TradeRecords)
   float  TotalRemainValues;
   float  AvgBuyPrice, AvgSellPrice;
   FILE   *fp;
-  char   *str;
+  char   *Str;
 
-  str  = (char*) malloc(150);
+  Str  = (char*) malloc(150);
 
   TotalIn   = 0;
   TotalOut  = 0;
@@ -1802,12 +1833,12 @@ void AnalysisProfit (TRADE_RECORD *TradeRecords)
   AvgBuyPrice    = 0;
   AvgSellPrice   = 0;
   
-  str = "Result";
-  printf(",,,\n",str);
+  Str = "Result";
+  printf(",,,\n",Str);
 
-  StrIDAppend(str,StockId);
+  StrIDAppend(Str,StockId);
 
-  fp = fopen(str,"w");
+  fp = fopen(Str,"w");
 
   if (fp == NULL)
   {
@@ -1815,9 +1846,10 @@ void AnalysisProfit (TRADE_RECORD *TradeRecords)
   }
 
   //fputs("Start\n",fp);
-  FPUT("Start",fp)
+  //FPUT("Start",fp)
+  FputCL("Start",fp);
 
-  WriteNum(StockId,str,fp)
+  WriteNum(StockId,fp)
 
   do{
     MoneyIn  = 0;
@@ -1847,18 +1879,22 @@ void AnalysisProfit (TRADE_RECORD *TradeRecords)
     //fwrite(&(TradeRecords2->Dates.Days), sizeof(int), 1, fp);
     //WriteDates(TradeRecords->Dates.Years,TradeRecords->Dates.Months,TradeRecords->Dates.Days,str,fp)
 
-    WriteDates(TradeRecords->Dates.Years,TradeRecords->Dates.Months,TradeRecords->Dates.Days,str,fp)
+    WriteDates(TradeRecords->Dates.Years,TradeRecords->Dates.Months,TradeRecords->Dates.Days,fp)
 
     printf("TradeRecords(%d)--%d/%d/%d--\n",Counter+1,TradeRecords->Dates.Years,TradeRecords->Dates.Months,TradeRecords->Dates.Days);
     printf("Action: ");
  
     if(TradeRecords->BuyOrSell){
       printf("In ,");
-      FPUT("In",fp)
+      FputCL("In.",fp);
+      //FPUT("In",fp)
       //fprintf(fp,"In");
       //fputs("In",fp);
     } else{
-      FPUT("Out",fp)
+      printf("Out ,");
+      FputCL("Out.",fp);
+      //FPUT("Out",fp)
+      //FPUT("In",fp)
       //fprintf(fp,"Out");
       //fputs("Out",fp);
     }
@@ -1866,9 +1902,9 @@ void AnalysisProfit (TRADE_RECORD *TradeRecords)
     printf("Shares = %d, Price = %.1f, Total Price = %.1f, Shares Remaining = %d \n",Shares,Price,Shares*Price,TradeRecords->SharesRemaining);
     printf("===============================================\n");
 
-    WriteNum(Shares,str,fp)
-    WriteFloatNum(Price,str,fp)
-    WriteNum(TradeRecords->SharesRemaining,str,fp)
+    WriteNum(Shares,fp)
+    WriteFloatNum(Price,fp)
+    WriteNum(TradeRecords->SharesRemaining,fp)
 
     Counter += 1;
     if(TradeRecords->Next == NULL)
@@ -1885,23 +1921,25 @@ void AnalysisProfit (TRADE_RECORD *TradeRecords)
   TotalRemainValues = (TotalOut - TotalIn) + (LastDayPrice*SharesRemaining);
 
   //fputs("total\n",fp);
-  FPUT("total",fp)
-  WriteFloatNum(LastDayPrice,str,fp)
-  WriteNum(SharesRemaining,str,fp)
-  WriteFloatNum(TotalIn,str,fp)
-  WriteFloatNum(TotalOut,str,fp)
-  WriteNum(BuyCount,str,fp)
-  WriteNum(SellCount,str,fp)
-  WriteFloatNum(((float)TotalRemainValues / (float) TotalIn )*100,str,fp)
+  //FPUT("total",fp)
+  FputCL("total",fp);
+  WriteFloatNum(LastDayPrice,fp)
+  WriteNum(SharesRemaining,fp)
+  WriteFloatNum(TotalIn,fp)
+  WriteFloatNum(TotalOut,fp)
+  WriteNum(BuyCount,fp)
+  WriteNum(SellCount,fp)
+  WriteFloatNum(((float)TotalRemainValues / (float) TotalIn )*100,fp)
   //fputs("end\n",fp);
-  FPUT("end",fp)
+  //FPUT("end",fp)
+  FputCL("end",fp);
 
   printf("Last Day Price = %.1f, Shares Remaining = %d, Remaining Shares Values = %.1f\n",LastDayPrice, SharesRemaining, LastDayPrice*SharesRemaining);
   printf("Input Money= %.1f, Output Money = %.1f, Buy/Sell/Total Count = %d/%d/%d, Average Buy/Sell Price(per shares treade) = %1.f, %1.f\n", TotalIn, TotalOut ,BuyCount,SellCount,Counter,AvgBuyPrice,AvgSellPrice);
   printf("Total Remain (Out - In)+Remaining Shares Values = %.1f\n", TotalRemainValues );
   printf("Returns(Total Remain)/Input = %.1f%%\n", ((float)TotalRemainValues / (float) TotalIn )*100 );
 
-  //free(str);
+  //free(Str);
   fclose(fp);
 }
 

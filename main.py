@@ -56,7 +56,7 @@ def GetData(Filename,InputStart,InputEnd):
         if i % 11 == 2:
             D = Da
             if ( YearStart < int(Y) and YearEnd > int(Y) ) or ( YearStart == int(Y) and MonthStart <= int(M) ) or ( YearEnd == int(Y) and MonthEnd >= int(M) ) :
-                print(Y+"/"+M+"/"+D)
+                #print(Y+"/"+M+"/"+D)
                 PlotDataX.append(Y+"/"+M+"/"+D)
                 InRange = 1
                 count += 1
@@ -147,7 +147,7 @@ def SplitYearData():
 
     for spli1,spli2,spli3,spli4,spli5 in zip(PlotDataX,PlotDataYO,PlotDataYC,PlotDataYH,PlotDataYL):
         spli_year = spli1.split("/")
-        print("SY=",spli_year)
+        #print("SY=",spli_year)
         if firstdata == 1:
             YearNow = spli_year[0]
             firstdata = 0
