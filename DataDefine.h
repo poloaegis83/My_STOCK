@@ -5,11 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MA5_OVER_MA10 100.1
-#define STOP_LOSS_LIMIT 0.02
-#define MA_MAX          60     /*For MA calculate*/
-#define FIRST_DAILY_DATA_INDEX 62 /*MA_MAX + 2*/
-#define BUFF_SIZE        800000
 #define DEBUG(Expression)        \
           if(DebugFlag){         \
 		  	printf(Expression);      \

@@ -28,7 +28,6 @@ int         StartDayIndex;
 DAILY_INFO  *InfoBuffer;        /*Global DailyInfo Buffer*/
 DAILY_INFO  *BuffInitPtr;
 
-
 void PrintInfo(int days)
 {
   DAILY_INFO  *Daily;
@@ -47,12 +46,7 @@ void PrintInfo(int days)
   }
   printf("\n=================================================\n");
 }
-/*
-void ReadLine(FILE *fp,char *str)
-{
-  fscanf(fp,"%s",str);
-}
-*/
+
 int FindTotalLen(FILE *fp)
 {
   char  *str;
@@ -331,7 +325,7 @@ int main(int argc, char **argv)
   //
   AnalysisProfit (ReturnRecords);
 
-  //free(InfoBuffer);
-  //XML_ParserFree(Parser);
+  free(InfoBuffer);
+
   return 0;
 }

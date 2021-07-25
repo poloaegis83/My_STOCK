@@ -228,6 +228,8 @@ def ReadResult(ID):
                 Result_Remain.append(ana)
         Counter += 1
 
+def GenResultTable(Res_X,Res_Y,Res_Action,Res_Share,Res_Remain,ID):
+    print("plot.table")
 
 def GenResult(PlotByYear,ID):
     global PlotDataX
@@ -367,9 +369,9 @@ def GenResult(PlotByYear,ID):
 
         plt.plot(Result_X,Result_Y)
         for a,b,c in zip(Result_X,Result_Y,Result_Action):
-            plt.text( a, b+10*RatioY , c, ha='center', va= 'bottom',fontsize=20,zorder=100)
+            plt.text( a, b+10*RatioY , c, ha='center', va= 'bottom',fontsize=20,zorder=100)  # showw Buy or Sell price
         #plt.show()
-        for a,b,c,d,e in zip(PlotDataX,PlotDataYH,Topp,Butt,PlotDataYL):
+        for a,b,c,d,e in zip(PlotDataX,PlotDataYH,Topp,Butt,PlotDataYL):     # show the price info to picture high open close low
             plt.text(a, b+1.3*RatioY, '%.1f' %b, ha='center', va= 'bottom',fontsize=2,zorder=100)
             plt.text(a, b+0.9*RatioY, '%.1f' %c, ha='center', va= 'bottom',fontsize=2,zorder=100)
             plt.text(a, b+0.5*RatioY, '%.1f' %d, ha='center', va= 'bottom',fontsize=2,zorder=100)
@@ -387,6 +389,8 @@ def GenResult(PlotByYear,ID):
         plt.cla()
         plt.clf()
         plt.close(fig)
+
+        GenResultTable(Result_X,Result_Y,Result_Action,Result_Share,Result_Remain,ID)
 
         Result_X.clear()
         Result_Y.clear()

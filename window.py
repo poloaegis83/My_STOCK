@@ -1,5 +1,4 @@
 import tkinter as tk
-import copy
 import shutil
 from tkinter import filedialog
 from FetchData import FetchHistoryData
@@ -19,7 +18,6 @@ TechType=[("Open",1),("High",2),("Low",3),("Close",4),("MA",5),("RSI",6),("KD_K"
 ("<=",23),("=",24),("+",25),("-",26),("*",27),("/",28),("CrossUp",29),("CrossDown",30),("(",31),(")",32),("And",33),("Or",34)]
 
 TradeType = [("Buy",50),("Sell",51),("BuyNextBar",52)]
-
 
 def OpToStr(Opcode):
     global TechType
@@ -397,17 +395,7 @@ def ReadListToLabel(file):
 
     l12.grid(row=Rowr+1, column=0,columnspan=20,rowspan=12)
     Rowr += count
-'''
-def ReadListToConditionList(file):
-    global ConditionList
 
-    ConditionList.clear()
-    for Lis in file.readlines():
-        Data = Lis[0:-1]  # to remove /n in last
-        if Data == "end":
-            break
-        ConditionList.append(Data)
-'''
 def CreatCondition():
     global  ConditionList
     global  CList
@@ -791,7 +779,6 @@ try:
 except:
     print("no file to remove")
 
-
 def Run():     # check rule, and prepare which item needed
 
     YearStart = var8.get()
@@ -1010,17 +997,10 @@ IdAll = "--"
 ReadIdlist()
 
 window = tk.Tk()
-window.title('Stock')
-window.geometry('840x950')
+window.title('Stock Emulator')
+window.geometry('840x970')
+window.iconphoto(False, tk.PhotoImage(file='window_icon.png'))
 window.resizable(0,0)
-'''
-window.columnconfigure(0, weight=1)
-window.columnconfigure(1, weight=1)
-window.columnconfigure(2, weight=1)
-window.columnconfigure(3, weight=1)
-window.columnconfigure(4, weight=1)
-#window.rowconfigure(3, weight=1)
-'''
 
 IDvar    = tk.StringVar()
 mainvar  = tk.StringVar()
@@ -1054,10 +1034,10 @@ var9.trace("w", lambda name, index,mode, var=var5: Entry9callback())
 
 # lebal
 l1 = tk.Label(window,textvariable= IDvar, bg='yellow') 
-l2 = tk.Label(window,text='Get stock history data(date format: yyyymm)', font=('Comic Sans MS', 20))
+l2 = tk.Label(window,text='Get stock history data(date format: yyyymm)', font=('Comic Sans MS', 18))
 l3 = tk.Label(window,text='Start Year:', font=('Corbel' ) )
 l4 = tk.Label(window,text='End year:', font=('Corbel' ) ) 
-l5 = tk.Label(window,text='Add or Remove ID', font=('Comic Sans MS', 20))
+l5 = tk.Label(window,text='Add or Remove ID', font=('Comic Sans MS', 18))
 l6 = tk.Label(window,textvariable= SetIdSta)
 l7 = tk.Label(window,text='Stock ID:', font=('Corbel' ) ) 
 l8 = tk.Label(window,text='Select Now:', font=('Corbel' ) )  # Select Now
@@ -1065,15 +1045,17 @@ l9 = tk.Label(window,textvariable=SelectOp, font=('Corbel' ) )
 l10 = tk.Label(window,text='Rule Now:', font=('Corbel' ) )  
 l11 = tk.Label(window,textvariable=CList, font=('Corbel' ) )  
 l12 = tk.Label(window,textvariable=ListText, font=('Corbel' ) )
-l13 = tk.Label(window,text="Save/Load rule from file", font=('Comic Sans MS', 20) )
-l14 = tk.Label(window,text="Rule editor", font=('Comic Sans MS', 20) )
+l13 = tk.Label(window,text="Save/Load rule from file", font=('Comic Sans MS', 18) )
+l14 = tk.Label(window,text="Rule editor", font=('Comic Sans MS', 18) )
 l15 = tk.Label(window,text="Days Interval:", font=('Corbel' ) )
 l16 = tk.Label(window,text="Function:", font=('Corbel' ) )
 l17 = tk.Label(window,text="Trade Type:", font=('Corbel' ) )
 l18 = tk.Label(window,text="Shares:", font=('Corbel' ) )
-l19 = tk.Label(window,text="Rules:", font=('Comic Sans MS', 20) )
+l19 = tk.Label(window,text="Rules:", font=('Comic Sans MS', 18) )
 l20 = tk.Label(window,text="No:", font=('Corbel' ) )
-l21 = tk.Label(window,text="   Iuput Start - End period", font=('Corbel' ) )
+l21 = tk.Label(window,text="Run Emulator", font=('Comic Sans MS', 18) )
+l22 = tk.Label(window,text="Iuput Start - End period", font=('Corbel' ) )
+
 
 ll0 = tk.Label(window,text="         ", font=('Arial' ) , bg='green')
 ll1 = tk.Label(window,text="         ", font=('Arial' ) , bg='red')
@@ -1117,7 +1099,7 @@ b6 = tk.Button(window, text='Create a Rule', font=('Constantia', 12 , "bold" ), 
 b7 = tk.Button(window, text='Remove rule by number', font=('Constantia', 9), command=RemoveCurrentConditionList)
 b8 = tk.Button(window, text='Save Rule', font=('Constantia', 9), command=SaveConditionToFile)
 b9 = tk.Button(window, text='Load Rule', font=('Constantia', 9), command=LoadConditionFromFile)
-b10 = tk.Button(window, text='Run', font=('Constantia', 10), width = 7, height = 3, command=Run)
+b10 = tk.Button(window, text='Run', font=('Constantia', 13 , "bold"), width = 9, command=Run) # run button
 
 Rowr += 1
 
@@ -1133,14 +1115,11 @@ e1.grid(row=Rowr, column=3,columnspan=3,sticky ="W")  # entry
 l4.grid(row=Rowr, column=5,columnspan=2,sticky ="E")  # end date
 e2.grid(row=Rowr, column=7,columnspan=3,sticky ="W")  # entry
 b1.grid(row=Rowr, column=9,columnspan=3,sticky ="W")  # get data button
-l21.grid(row=Rowr, column=13,columnspan=6,sticky ="E") # Iuput Start-End period lebal
+
 Rowr += 1
 
 l5.grid(row=Rowr, column=0,columnspan=20)    # Add or Remove ID lebal
 l6.grid(row=Rowr, column=4,columnspan=5,sticky ="W")      # Add or Remove ID status lebal
-e8.grid(row=Rowr, column=14,columnspan=3,sticky ="E") # run input start
-e9.grid(row=Rowr, column=16,columnspan=3,sticky ="E") # run input end
-b10.grid(row=Rowr,column=14,rowspan=4,columnspan=5,sticky ="E")  # run button
 Rowr += 1
 
 l7.grid(row=Rowr, column=1,columnspan=2,sticky ="E")   # stock id
@@ -1152,8 +1131,17 @@ Rowr += 1
 l13.grid(row=Rowr, column=0,columnspan=20) # Save/Load rule from file label
 Rowr += 1
 
-b8.grid(row=Rowr, column=8,columnspan=3,sticky ="W") # Save rule button
+b8.grid(row=Rowr, column=8,columnspan=3,sticky ="W")  # Save rule button
 b9.grid(row=Rowr, column=10,columnspan=3,sticky ="W") # Load rule button
+Rowr += 1
+
+l21.grid(row=Rowr, column=0,columnspan=20) #Run Emulator lebal
+Rowr += 1
+
+l22.grid(row=Rowr, column=3,columnspan=6,sticky ="E") # Iuput Start-End period lebal
+e8.grid(row=Rowr, column=8,columnspan=3,sticky ="E") # run input start
+e9.grid(row=Rowr, column=11,columnspan=3,sticky ="") # run input end
+b10.grid(row=Rowr,column=12,columnspan=6,sticky ="N")  # run button
 Rowr += 1
 
 l14.grid(row=Rowr, column=0,columnspan=20)  # rule editor lebal
@@ -1244,25 +1232,3 @@ ll19.grid(row=0, column=19,sticky ="W")
 IDvar.set("ID List Now: "+IdAll)
 
 window.mainloop()
-
-
-'''
-def Sim():
-    Dates = var111.get()
-    Y = Dates[0:4]
-    M = Dates[4:]
-    OutStr = "Year ="+Y+" Month ="+M
-    Error = 0
-    try:
-        intY = int(Y)
-        intM = int(M)
-    except ValueError:
-        Error = 1
-
-    if Error == 1:
-        mainvar.set("No a value")
-    else:
-        if intY < 1980 or ( intM < 0 or intM > 12 ):
-            OutStr = "Date format error" 
-        mainvar.set(OutStr)
-'''
